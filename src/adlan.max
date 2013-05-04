@@ -1,0 +1,297 @@
+	;==============================
+	;== ADLAN ADVENTURE LANGUAGE ==
+	;==       ROM version        ==
+	;==   (C) R.Brooksby 1987    ==
+	;==============================
+
+	;Vers 4.15
+
+	; Copyright (C) 1987, 1999 Richard Brooksby.  All rights
+	; reserved.  You may make and distribute verbatim copies of
+	; this document provided that you retain as they appear all
+	; copyright and licence notices.  You may NOT charge a fee for
+	; this document or for distributing this document.  You may
+	; NOT make or distribute derivative works (modified versions)
+	; of this document without the express written permission of
+	; the copyright holder.
+	;
+	; This copyright notice was added on 1999-09-18.
+
+.romvers	equ 1
+.topwinh	equ 3		;height of top window
+
+	NOLIST
+	WRITE "R-ADLAN.BIN"
+
+
+	;== ROM PREFIX ==
+
+	org #C000
+
+	byte 1,4,1,5
+	word name_tab
+	jp boot
+	jp compile
+	jp bas_compile
+	jp compress
+	jp run
+	jp romoff
+	jp help
+	jp info
+	jp copying
+	jp ROM_unical
+	jp ROM_blocked
+	jp ROM_stylite
+
+.name_tab
+	text "ADLAN RO", "M"+128
+	text "ADLA", "N"+128
+	text "AD", "L"+128
+	text "COMPRES", "S"+128
+	text "RU", "N"+128
+	text "ROMOF", "F"+128
+	text "ADLAN.HEL", "P"+128
+	text "ADLAN.INF", "O"+128
+	text "ADLAN.COPYIN", "G"+128
+	text "UNICA", "L"+128
+	text "BLOCKE", "D"+128
+	text "STYLIT", "E"+128
+	byte 0
+
+
+	;==== BOOT ENTRY ====
+
+.boot	push bc
+	push hl
+	push de			;save memory pool pointers
+
+	;== Sign on in UNICAL HAND ==
+
+	call boot_unical
+	call r_pcprint
+
+	text " adlan compiler ",164,"1988 richard brooksby",13,10,0
+
+	ld de,256		;return to default matrices
+	call #BBAB		;TXT SET MATRIX
+
+	call r_pcprint
+
+	text "   (see |ADLAN.COPYING for details)",13,10,10,0
+
+	pop de
+	push de
+	ld hl,#0040
+	and a
+	sbc hl,de		;is ADLAN the first to use low memory?
+	jp nz,boot_err
+
+	ld c,0			;check BASIC version
+	call #B915		;KL PROBE ROM
+	cp #80			;is it BASIC?
+	jr nz,boot_err
+	ld a,l: dec a		;must be 1.x
+	jr nz,boot_err
+	ld a,h
+	ld (basicver),a		;save version
+	cp 3
+	jr nc,boot_err		;1.0 or 1.1/1.2
+
+	pop de			;discard old lower limit
+	ld de,code_space
+	pop hl
+	pop bc
+	scf			;success!
+	ret
+
+.boot_err
+	call r_pcprint
+	text 7," ** ERROR: Unsuitable environment **",13,10,10,0
+.no_boot
+	pop de
+	pop hl
+	pop bc
+	and a			;Failed-carry clear
+	ret
+
+
+	;=== in-ROM version of pcprint ===
+
+.r_pcprint
+	pop hl
+.r_pc1	ld a,(hl): inc hl
+	and a: jp z,#001E	;low PCHL
+	call #BB5A
+	jr r_pc1
+
+
+	;=== Get word from BASIC 1.0 or 1.1/1.2 ===
+	;entry	hl=1.0 address of word
+	;	de=1.1/1.2 address
+	; exit	hl=word
+	;	de corrupt
+
+.access_bas
+	push af
+	ld a,(basicver)
+	and #7F			;mask off Run/Save version bit
+	jr z,a_b1
+	ex de,hl		;select in 1.1/1.2 address
+.a_b1	ld e,(hl): inc hl
+	ld d,(hl)		;get the word
+	ex de,hl
+	pop af
+	ret
+
+
+	;== Copy initial variables and runtimes from ROM ==
+.copy_down
+	ld bc,objectlen
+	ld de,#0040
+	ld hl,objectcode
+	ldir
+	ret
+
+	;=== START COMPILATION FROM BASIC REMS ===
+
+.bas_compile
+
+	call copy_down
+
+	ld a,2			;start from BASIC
+	ld (source),a
+	xor a
+	jr bc_entry
+
+
+	;=== START COMPILATION FROM PROTEXT/MAXAM ===
+
+
+.compile
+	call copy_down
+
+.bc_entry
+	;== Retain top level for errors ==
+
+	ld (toplevel),sp
+
+	push af			;Save parameters
+
+	;== Abandon any present files ==
+
+	call #BC92
+	call #BC7D
+
+	;== Get HIMEM from BASIC ==
+	ld hl,#AE7B		;1.0 address }
+	ld de,#AE5E		;1.1 address } of HIMEM
+	call access_bas		;select which
+	ld de,2048		;space for file buffer
+	and a: sbc hl,de
+	ld (memtop),hl		;store top of memory
+
+	;== Sign on ==
+	call pcprint
+	text 4,2,24,"   ADLAN 4.15   (ROM)   ",13,10
+	text " ",164,"1988 Richard Brooksby ",24,13,10,10
+	text 31,1,26,0		;force scroll on print
+
+	;== Compile inside window ==
+
+	ld a,1
+	call #BBB4		;TXT STR SELECT
+	ld hl,#0000+topwinh
+	ld de,#5019
+	call #BB66		;TXT WIN ENABLE
+
+	;== Set up vars ==
+
+	;Find start of text and start for code
+	ld hl,#AE81		;1.0 address }
+	ld de,#AE64		;1.1 address } of BASIC start
+	call access_bas
+	inc hl			;start of BASIC program
+	push hl
+
+	;== Find end of BASIC program ==
+.fts	ld e,(hl): inc hl
+	ld d,(hl): inc hl
+	ld a,d: or e		;end of BASIC program?
+	jr z,ftsx
+	add hl,de
+	dec hl: dec hl		;step back to next line start.
+	jr fts
+.ftsx	ex (sp),hl		;put end on stack
+
+	ld a,(source)		;BASIC REMs or M/P?
+	and 2
+	jr z,edit_s
+
+	;== Find first BASIC REM ==
+.bs1	push hl
+	pop de
+	inc hl: inc hl
+	inc hl: inc hl
+	call bas_token		;check for quote token
+	ex de,hl
+	ld a,0			;prevent quote
+	jr nz,bs3
+	ld a,(de)		;Look for second quote
+	ld c,a
+.bs3	ld e,(hl): inc hl
+	ld d,(hl): dec hl
+	ld a,d: or e		;zero (end)
+	jp z,err_eot
+	add hl,de		;point to next line
+	ld a,c
+	cp "'"			;test for second quote
+	jr nz,bs1
+
+	pop de			;start code at end of BASIC
+	ld (game_addr),de
+	jr not_edit		;leave addr in HL
+
+	;== Protext/Maxam source ==
+
+.edit_s	pop hl: push hl		;recover end of BASIC
+	ld b,a: ld c,a
+	cpir			;Search for end of text, code starts there
+	ld (game_addr),hl
+	pop hl			;recover start of text
+
+.not_edit
+	ld (txtptr),hl		;store.
+
+
+	;== Was a filename supplied? ==
+
+	pop af
+	and a
+	jr z,nofnamed
+	ld a,1
+	ld (source),a		;Start reading from file
+	ld l,(ix+0)
+	ld h,(ix+1)		;Address of string
+	ld b,(hl): inc hl	;length of name
+	ld e,(hl): inc hl
+	ld d,(hl)		;Address of name
+	ld hl,(memtop)		;Buffer
+	ex de,hl
+	call disp_file		;inform user
+	call #BC77		;CAS IN OPEN
+	ld hl,erm_nofile
+	jp nc,error
+
+.nofnamed
+	ld ix,(game_addr)
+				;point to compilation space
+	call get_line		;Get first line file or memory.
+
+	;== COMPILE TEXT ==
+
+	read "adlan1.sub"
+	read "adlan2.sub"
+	read "adlan3.sub"
+	read "adlan4.sub"
+
+	list:end

@@ -1,0 +1,368 @@
+	;==============================
+	;== ADLAN ADVENTURE COMPILER ==
+	;==       SUBFILE 2          ==
+	;==   Last updated 11APR90   ==
+	;==============================
+
+	; Copyright (C) 1987, 1999 Richard Brooksby.  All rights
+	; reserved.  You may make and distribute verbatim copies of
+	; this document provided that you retain as they appear all
+	; copyright and licence notices.  You may NOT charge a fee for
+	; this document or for distributing this document.  You may
+	; NOT make or distribute derivative works (modified versions)
+	; of this document without the express written permission of
+	; the copyright holder.
+	;
+	; This copyright notice was added on 1999-09-18.
+
+	;== Compile colour pair ==
+
+.comp_colour
+	ld a,#01		;LD BC,colour
+	call comp_a
+	call trans_colour	;get first colour
+	jp nc,err_badcolour
+	ld d,c
+	ld e,c
+	push de
+	call trans_colour	;is there a second colour?
+	pop de
+	jp nc,comp_de
+	ld e,c
+	jp comp_de
+
+	;== Compile call to DE ==
+
+.comp_call
+	ld a,#CD
+	call comp_a
+	jp comp_de
+
+	;== Compile LD HL,location ==
+
+.get_sloc
+	call skip_bl
+	ld de,k_here
+	call keyword		;is location HERE?
+	jr nz,gsl1
+	ld a,#2A
+	ld de,loc
+	call comp_a
+	jp comp_de		;compile LD HL,(loc)
+.gsl1	ld a,#21
+	call comp_a		;compile LD HL,????
+	ld de,k_limbo
+	call keyword
+	jr nz,gsl2
+	ld de,2
+	jp comp_de		;LIMBO location
+.gsl2	call get_cloc		;get ordinary location (or CARRY)
+	jp comp_de		;and compile that
+
+
+	;== FIND AND EXECUTE KEYWORD FROM LIST ==
+	;entry	de points to keyword list
+
+.keylist
+	push de
+	call keyword		;Check for match
+	pop de
+	push af
+	ex de,hl
+	call skip_let		;Skip to end of keyword in list
+	inc hl			;Skip null
+	ld c,(hl): inc hl
+	ld b,(hl): inc hl	;Get address of routine for this keyword
+	ex de,hl
+	pop af
+	jp z,#000E		;PCBC to routine if matched
+	ld a,(de)		;end of list?
+	and a
+	jr nz,keylist		;else try again
+	ld hl,erm_nokey		;bad keyword!
+	jp error
+
+
+	;==== TRANSLATE COLOUR NAME ====
+	;entry	hl points to colour name
+	;exit	c true if cound, c=colour number
+	;	af, bc, de corrupt
+
+.trans_colour
+	call skip_bl
+	ld de,colour
+	ld bc,27*256+0		;b=counter, c=number
+.tc1	push de
+	call keyword		;found colour?
+	pop de
+	scf: ret z		;found!
+	ex de,hl
+	call skip_let		;skip to end of colour
+	inc hl			;and null
+	ex de,hl
+	inc c
+	djnz tc1		;try again
+	and a			;clear carry
+	ret			;no such colour!
+
+
+	;==== CONVERT NUMBER AT HL ====
+	;entry	hl points to number
+	;exit	de=number converted
+	;	hl=first bad char
+
+.convert
+	ld de,0
+.con1	ld a,(hl)
+	sub "0"
+	ret c			;bad char
+	cp 10
+	ret nc			;bad char
+	inc hl
+	ex de,hl
+	push hl
+	pop bc
+	add hl,hl		;*2
+	jp c,err_overfl
+	add hl,hl		;*4
+	jp c,err_overfl
+	add hl,bc		;*5
+	jp c,err_overfl
+	add hl,hl		;*10
+	jp c,err_overfl
+	ld c,a
+	ld b,0
+	add hl,bc		;add in new figure
+	jp c,err_overfl
+	ex de,hl
+	jr con1
+
+	;== COMPILER MESSAGES & KEYWORDS ==
+
+.erm_eot	text "unexpected end of	text",0
+.erm_unex	text "unexpected keyword",0
+.erm_nokey	text "unknown keyword",0
+.erm_syntax	text "bad syntax",0
+.erm_status	text "too many status letters used",0
+.erm_vword	text "not enough slots for nouns",0
+.erm_overfl	text "number too large",0
+.erm_memory	text "run out of memory",0
+.erm_badloc	text "bad location code",0
+.erm_duploc	text "duplicate location code",0
+.erm_noobj	text "object already put somewhere",0
+.erm_noword	text "unknown word",0
+.erm_nostrt	text "no start location specified",0
+.erm_badch	text "bad control code",0
+.erm_nofile	text "file error",0
+.erm_nodir	text "not a direction word",0
+.erm_badmes	text "bad message number",0
+.erm_esc	text "escape pressed",0
+.erm_badcolour	text "unknown colour",0
+
+.k_words	text "WORDS",0
+.k_ewords	text "ENDWORDS",0
+.k_objects	text "OBJECTS",0
+.k_eobjects	text "ENDOBJECTS",0
+.k_places	text "PLACES",0
+.k_eplaces	text "ENDPLACES",0
+.k_start	text "START",0
+.k_description	text "DESCRIPTION",0
+.k_before	text "BEFORE",0
+.k_after	text "AFTER",0
+.k_option	text "OPTIONS",0
+.k_eoption	text "ENDOPTIONS",0
+.k_mess		text "MESSAGES",0
+.k_emess	text "ENDMESSAGES",0
+.k_carry	text "CARRY",0
+.k_limbo	text "LIMBO",0
+.k_here		text "HERE",0
+.k_from		text "FROM",0
+.k_to		text "TO",0
+.k_else		text "ELSE",0
+.k_or		text "OR",0
+.k_and		text "AND",0
+.k_is		text "IS",0
+.k_than		text "THAN",0
+.commands	text "DESCRIBE",0: 	word c_desc
+		text "DRAW",0:		word c_draw
+		text "MOVE",0:		word c_move
+		text "PRINT",0:		word c_print
+		text "DONE",0:		word c_done
+		text "LIST",0:		word c_list
+		text "MOVETO",0:	word c_moveto
+		text "IF",0:		word c_if
+		text "WHILE",0:		word c_while
+		text "DISPLAY",0:	word c_display
+		text "EXAMINE",0:	word c_examine
+		text "QUIT",0:		word c_quit
+		text "CR",0:		word c_crlf
+		text "ATTRIB",0:	word c_attrib
+		text "SP",0:		word c_sp
+		text "MAKE",0:		word c_make
+		text "UNMAKE",0:	word c_unmake
+		text "LOOP",0:		word c_loop
+.k_key		text "KEY",0:		word e_key
+		text "KEYPRESS",0:	word e_key
+		text "LINK",0:		word c_link
+		text "SWAP",0:		word c_swap
+		text "SAVE",0:		word c_save
+		text "LOAD",0:		word c_load
+		text "SORT",0:		word c_sort
+.k_pict		text "PICTURE",0:	word c_picture
+		text "PRINTF",0:	word c_printf
+		text "EXITS",0:		word c_exits
+		text "RESTART",0:	word c_restart
+		text "QUICKSAVE",0:	word c_quicksave
+		text "QUICKLOAD",0:	word c_quickload
+		text "INK",0:		word c_ink
+		text "BORDER",0:	word c_border
+		text "WINDOW",0:	word c_window
+		text "FORMAT",0:	word c_format
+		text "PEN",0:		word c_pen
+		text "PAPER",0:		word c_paper
+		text "STREAM",0:	word c_stream
+		text "LOCATE",0:	word c_locate
+		text "CLEAR",0:		word c_clear
+		text "CALL",0:		word c_call
+		text "CALLMC",0:	word c_callmc
+		text "LOADMC",0:	word c_loadmc
+		byte 0
+.expres		text "EQUAL",0:		word e_equal
+.k_at		text "AT",0:		word e_at
+.k_not		text "NOT",0:		word e_not
+		text "FIND",0:		word e_find
+		text "EITHER",0:	word e_either
+		text "BOTH",0:		word e_both
+		text "TYPED",0:		word e_typed
+		text "ADD",0:		word e_add
+		text "SUB",0:		word e_sub
+		text "ITEM",0:		word e_item
+		text "COUNT",0:		word e_count
+.k_desc		text "DESCRIBING",0:	word e_desc
+		text "KEY",0:		word e_key
+		text "KEYPRESS",0:	word e_key
+		text "YESNO",0:		word e_yesno
+		text "ATTRIB",0:	word e_attrib
+		text "STATUS",0:	word e_status
+		text "RANDOM",0:	word e_random
+		text "GREATER",0:	word e_greater
+		text "FIRSTAT",0:	word e_firstat
+		text "BEEN",0:		word e_been
+		text "AREA",0:		word e_area
+		byte 0
+.colour		text "BLACK",0
+		text "BLUE",0
+		text "BRIGHTBLUE",0
+		text "RED",0
+		text "MAGENTA",0
+		text "MAUVE",0
+		text "BRIGHTRED",0
+		text "PURPLE",0
+		text "BRIGHTMAGENTA",0
+		text "GREEN",0
+		text "CYAN",0
+		text "SKYBLUE",0
+		text "YELLOW",0
+		text "WHITE",0
+		text "PASTELBLUE",0
+		text "ORANGE",0
+		text "PINK",0
+		text "PASTELMAGENTA",0
+		text "BRIGHTGREEN",0
+		text "SEAGREEN",0
+		text "BRIGHTCYAN",0
+		text "LIMEGREEN",0
+		text "PASTELGREEN",0
+		text "PASTELCYAN",0
+		text "BRIGHTYELLOW",0
+		text "PASTELYELLOW",0
+		text "BRIGHTWHITE",0
+		byte 0
+
+
+
+	;== COMPILE-TIME ERRORS ==
+
+.err_escape
+	ld hl,erm_esc
+	jp error
+
+.err_badmess
+	ld hl,erm_badmes
+	jp error
+
+.err_nodirec
+	ld hl,erm_nodir
+	jp error
+
+.err_badch
+	ld hl,erm_badch
+	jp error
+
+.err_nostrt
+	ld hl,erm_nostrt
+	jp error
+
+.err_noword
+	ld hl,erm_noword
+	jp error
+
+.err_duploc
+	ld hl,erm_duploc
+	jr error
+
+.err_badloc
+	ld hl,erm_badloc
+	jr error
+
+.err_overfl
+	ld hl,erm_overfl
+	jr error
+
+.err_status
+	ld hl,erm_status
+	jr error
+
+.err_syntax
+	ld hl,erm_syntax
+	jr error
+
+.err_eot
+	ld hl,erm_eot
+	push hl
+	jr error1		;skip printing of line
+
+.err_badcolour
+	ld hl,erm_badcolour
+	jr error
+
+.err_unex
+	ld hl,erm_unex
+	;\/\/\/
+
+.error	push hl
+	ld hl,txtbuff
+	call hlprint		;Display line
+.error1	call pcprint
+	text 13,10,10,"** ERROR: ",0
+	pop hl
+	call hlprint
+	call pcprint
+	text " near line ",0
+	ld hl,(line_nr)
+	call disp_hl		;Print line number
+	call pcprint
+	text " **",13,10,0
+	call #BC7D		;CAS IN ABANDON
+	call #BC92		;CAS OUT ABANDON
+	call #BB78		;GET CURSOR POSITION
+	push hl
+	xor a
+	call #BBB4		;stream 0
+	pop hl
+	and a			;was prev. stream 0?
+	jp z,abort
+	ld a,l
+	add topwinh		;calc new row
+	call #BB72		;set row to same as in other window
+	jp abort

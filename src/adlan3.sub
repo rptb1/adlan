@@ -1,0 +1,1876 @@
+	;================================
+	;=== ADLAN ADVENTURE LANGUAGE ===
+	;===        SUB-FILE 3        ===
+	;===   Last edited 29MAR90    ===
+	;================================
+
+	; Copyright (C) 1987, 1999 Richard Brooksby.  All rights
+	; reserved.  You may make and distribute verbatim copies of
+	; this document provided that you retain as they appear all
+	; copyright and licence notices.  You may NOT charge a fee for
+	; this document or for distributing this document.  You may
+	; NOT make or distribute derivative works (modified versions)
+	; of this document without the express written permission of
+	; the copyright holder.
+	;
+	; This copyright notice was added on 1999-09-18.
+
+	;== START OF RUNTIME CODE ==
+
+	;The ROM version moves the runtime code to low memory before each
+	;compilation.
+
+.objectcode
+
+IF romvers
+	org #0040,@
+ENDIF
+
+	;== RUNTIME ERRORS ==
+
+.erm_badmc	text "machine code too long or of wrong type",0
+.erm_rt_memory	text "run out of memory",0
+.erm_badobj	text "object not found",0
+.erm_noitem	text "bad item number",0
+.erm_badfile	text "|RUN can only execute binary files",0
+.erm_norun	text "failed to load file.",13,10
+		text "          Memory may be corrupt",0
+.erm_params	text "bad number of parameters",0
+.erm_cantopen	text "cannot open file",0
+
+.err_badmc
+	ld hl,erm_badmc
+	jp rt_error
+
+.err_memory
+	ld hl,erm_rt_memory
+	jp rt_error
+
+.err_nomess
+	call pcprint
+	text "** ERROR: message $",0
+	call disp_hl
+	call pcprint
+	text " not found **",13,10,0
+	jp abort
+
+.err_badobj
+	ld hl,erm_badobj
+	jp rt_error
+
+.err_noitem
+	ld hl,erm_noitem
+	jp rt_error
+
+.err_novar
+	call pcprint
+	text "** ERROR: variable #",0
+	call disp_hl
+	call pcprint
+	text " not allocated **",13,10,0
+	jp abort
+
+.err_noloc
+	call pcprint
+	text "** ERROR: Location ",0
+	ld a,b
+	and a			;carry location?
+	jr nz,enlc1
+	call pcprint
+	text "carry",0
+	jr enlc2
+.enlc1	push bc
+	call #bb5d
+	pop de
+	ld l,e
+	ld h,0
+	call disp_hl
+.enlc2	call pcprint
+	text " not found **",13,10,0
+	jr abort
+
+.rt_error
+	call pcprint
+	text "** ERROR: ",0
+	call hlprint
+	call pcprint
+	text " **",13,10,0
+	;\/\/\/
+
+.abort	ld sp,(toplevel)
+	ret
+
+	
+	;== Compile de to ix ==
+
+.comp_de
+	push af
+	ld a,(saved)
+	and a
+	call z,escape		;check for escape
+	pop af
+	push de: push hl
+	push ix: pop de
+	ld hl,(memtop)
+	and a
+	sbc hl,de		;Over the top of memory?
+	jp c,err_memory
+	pop hl: pop de
+	ld (ix),e: inc ix
+	ld (ix),d: inc ix
+	ret
+
+	;== Compile a to ix ==
+
+.comp_a	push af
+	ld a,(saved)
+	and a
+	call z,escape		;check for escape
+	pop af
+	push de: push hl
+	push ix: pop de
+	ld hl,(memtop)
+	and a
+	sbc hl,de		;Over the top of memory?
+	jp c,err_memory
+	pop hl: pop de
+	ld (ix),a: inc ix
+	ret
+
+	
+	;== Check letter is valid ==
+	;converts to upper case, may corrupt non-letters
+	;nc if invalid
+
+.validlet
+	cp "a"			;lower case?
+	jr c,vl1
+	sub "a"-"A"		;convert to upper case.
+.vl1	cp "Z"+1
+	ret nc			;not a letter.
+	cp "A"
+	ccf
+	ret
+
+	
+	;== Skip valid letters at hl ==
+	;exit	hl points to first non-letter
+
+.skip_let
+	ld a,(hl)
+	call validlet
+	ret nc
+	inc hl
+	jr skip_let
+
+	
+	;== Get word number of noun or word ==
+	;as for find_word, but hl preserved
+
+.word_num
+	ld c,#00
+	push hl
+	call find_wd
+	pop hl
+	ret c
+	ld c,#80
+	push hl
+	call find_word
+	pop hl
+	ret
+
+	;== Find word at hl ==
+	;entry	hl=text word to find
+	;	c =#00 for words, or #80 for nouns
+	;exit	a =word number
+	;	b,de,hl corrupt
+
+.find_word
+	call find_wd
+	jp nc,err_noword
+	ret
+
+	;as above, but nc if not found, hl points to terminating zero.
+
+.find_wd
+	ex de,hl
+	ld hl,(wordlist)
+.fw1	ld a,(hl)
+	and a
+	ret z			;end of list, not found
+	push de: push hl
+	push bc
+	call cp_words		;Compare words
+	pop bc
+	pop hl
+	inc hl: inc hl
+	inc hl: inc hl		;point hl at word number
+	pop de
+	ld a,(hl)
+	ex de,hl
+	scf: ret z		;found!
+	ex de,hl
+	inc hl			;point to next word
+	jr fw1
+
+	
+	;== Compare words ==
+	;entry	de=text word (will be converted to upper case)
+	;	hl=list word
+	;	c = word type (#80 for nouns, #00 for others)
+	;exit	z true if same
+	;	af,bc,hl,de corrupt
+
+.cp_words
+	ld b,4
+.cpw1	ld a,(de)
+	call validlet
+	jr nc,cpw2
+	xor (hl)		;Compare
+	xor c			;Invert top bit for objects
+	ld c,0			;(but only for first letter)
+	ret nz			;Different!
+	ld a,(de)
+	inc de
+	inc hl
+	djnz cpw1
+	xor a			;Same!
+	ret
+.cpw2	ld a,(hl)		;de word ended
+	cp " "			;so hl word must have a space
+	ret
+
+	
+	;== Find location ==
+	;entry	hl=location code
+	;	(link)=address of last created location
+	;exit	nc if not found,
+	;  else	hl=address of location block
+	;	bc=location code
+	;	af,bc corrupt
+
+.find_loc
+	push hl: pop bc		;loc code in bc
+	ld hl,(link)
+.fl1	ld a,h: or l
+	ret z			;End of list, not found!
+	inc hl: inc hl
+	ld e,(hl): inc hl
+	ld d,(hl): dec hl	;Get this location's code
+	dec hl: dec hl
+	ex de,hl
+	push hl
+	and a: sbc hl,bc	;Compare codes
+	pop hl
+	ex de,hl
+	scf: ret z		;Found!
+	ld e,(hl): inc hl
+	ld d,(hl)
+	ex de,hl		;Get address of next location
+	jr fl1
+
+	
+	;==== MOVE OBJECT FROM LOC1 TO LOC2 ====
+	;entry	a = object nr
+	;	de= from loc code
+	;	hl= to loc code
+
+.locmove_obj
+	push af
+	push de
+	call find_loc
+	jp nc,err_noloc		;Loc not found!
+	ld de,12
+	add hl,de		;point at obj list
+	ex (sp),hl		;get TO code, save FROM address
+	call find_loc
+	jp nc,err_noloc		;Loc not found!
+	ld de,12
+	add hl,de		;point at obj list
+	pop de			;get FROM address
+	pop af
+	;\/\/\/
+
+	;==== MOVE OBJECT ====
+	;entry	a = object nr
+	;	de= addr of list head to move from
+	;	hl= addr of list head to move to
+	;exit	c true if moved OK
+
+.move_obj
+	push hl
+	ex de,hl
+	call find_obj		;Find object in first list
+	pop bc
+	ret nc			;Not found!
+	push bc
+	ld c,(hl): inc hl
+	ld b,(hl): dec hl	;Get address of obj after this one
+	ex de,hl
+	ld (hl),c: inc hl
+	ld (hl),b		;Skip this object in list
+	pop hl			;List to move object to
+	ld c,(hl): ld (hl),e
+	inc hl			;bc=first object
+	ld b,(hl): ld (hl),d
+	dec hl			;header=this object
+	ex de,hl
+	ld (hl),c: inc hl
+	ld (hl),b: dec hl	;Point this object there too
+	ret
+
+	
+	;==== FIND OBJECT IN LIST ====
+	;entry	a = object number
+	;	hl= address of list header
+	;exit	nc if not found,
+	;  else hl=address of object block
+	;	de=address of previous link
+	;	c corrupt
+
+.find_obj
+	ld e,(hl): inc hl	;Move down list
+	ld d,(hl): dec hl
+	ex de,hl
+	ld c,a
+	ld a,h: or l
+	ld a,c
+	ret z			;End of list, not found
+	inc hl: inc hl
+	cp (hl)			;Object numbers match?
+	dec hl: dec hl
+	scf: ret z		;Yes!
+	jr find_obj
+
+	
+	;==== DISPLAY OBJECTS AT LOCATION ====
+	;entry	hl=location code
+
+.disp_list
+	call find_loc
+	jp nc,err_noloc		;loc not found
+	ld de,12
+	add hl,de		;hl point to list head
+.dl1	ld e,(hl): inc hl
+	ld d,(hl): inc hl
+	ex de,hl		;hl points at object
+	ld a,h: or l
+	ret z			;end of list.
+	push hl
+	ld de,6
+	add hl,de		;point hl at name
+	call hlprintc		;print it
+	pop hl
+	push hl
+	call dml		;display status messages
+	pop hl
+	call crlf
+	jr dl1
+
+.dml	inc hl: inc hl: inc hl
+	ld a,(hl)		;get object status
+	and a: ret z		;no status
+	ld b,a
+	ld hl,(messages)
+.dml1	ld e,(hl): inc hl
+	ld d,(hl): inc hl
+	ld a,d: or e
+	ret z			;end of list
+	bit 7,d			;status message type?
+	jr nz,dml2
+	ld a,e
+	and b			;status set?
+	jr z,dml2
+	call hlprintc		;display message
+	jr dml1
+.dml2	call skip_str
+	jr dml1
+
+	;== GET ADDRESS OF MESSAGE ==
+	;entry	hl=message number
+	;exit	hl=address
+	;	error if not found
+
+.find_mess
+	bit 7,h
+	jp nz,err_nomess
+	set 7,h
+	ex de,hl
+	ld hl,(messages)
+.fm1	ld c,(hl): inc hl
+	ld b,(hl): inc hl	;Get message number
+	push de
+	ex de,hl
+	ld a,b: or c
+	jp z,err_nomess		;end of list!
+	and a: sbc hl,bc
+	ex de,hl
+	pop de
+	ret z			;Found!
+	call skip_str
+	jr fm1
+
+	
+	;== GET ADDRESS OF OBJECT IN MEMORY ==
+	;entry	a=object number
+	;exit	error if not found
+	;  else hl=address of object block
+	;	b,de corrupt
+
+.get_objaddr
+	ld b,a
+	ld hl,(objstart)
+.goa1	push hl
+	inc hl: inc hl
+	ld a,(hl)
+	and a			;end of objects?
+	jp z,err_badobj
+	cp b			;object found?
+	pop hl
+	scf: ret z		;done if so
+	ld de,6
+	add hl,de		;point to name
+	call skip_str
+	call skip_str		;skip name and description
+	jr goa1
+
+	
+	;==== DISPLAY HL IN DENARY ====
+
+.disp_hl
+	ld bc,dh_buff
+.dh1	dec bc
+	ld de,10
+	call udiv_hl_de
+	ld a,"0"
+	add a,e
+	ld (bc),a		;Store remainder
+	ld a,h: or l
+	jr nz,dh1		;Until hl=0
+	push bc
+	pop hl
+	jp hlprint
+
+	
+	;=== UNSIGNED Divide hl by de ===
+	;hl=hl/de (de=remainder)
+	;af corrupt
+
+.udiv_hl_de
+	push bc
+	ld c,l
+	ld a,h			;dividend in AC
+	ld b,16
+	ld hl,0
+.dhd1	rl c: rla
+	adc hl,hl
+	sbc hl,de
+	jp nc,dhd2
+	add hl,de
+.dhd2	ccf
+	djnz dhd1
+	rl c
+	rla
+	ld e,c
+	ld d,a
+	ex de,hl
+	pop bc
+	ret
+
+	;== MULTIPLY HL BY DE ==
+	;HL=HL*DE, af,de corrupt
+
+.mul_hl_de
+	push bc
+	ld a,l: ld c,h
+	ld hl,0			;result into HL
+	ld b,16			;16 bits
+.mhd1	srl c: rra		;shift CA into carry
+	jr nc,mhd2		;no addition needed
+	add hl,de
+.mhd2	sla e: rl d		;shift DE left
+	djnz mhd1		;do next bit
+	pop bc
+	ret
+
+	
+	;== Print from PC until 0 ==
+
+.pcprint
+	ex (sp),hl
+	call hlprint
+	ex (sp),hl
+	ret
+
+	;== Print from HL until 0 ==
+
+.hlprint
+	ld a,(hl): inc hl
+	and a: ret z
+	call #bb5a
+	jr hlprint
+
+	;== Print compressed from PC until 0 ==
+
+.pcprintc
+	ex (sp),hl
+	call hlprintc
+	ex (sp),hl
+	ret
+
+	;== Print compressed from HL until 0 ==
+	;with italics/formatting
+
+.hlprintc			;print compressed string
+	ld a,(localbefore)
+	and a			;formatting on?
+	jp nz,form_print
+	push bc
+	ld b,0			;start without italics on
+.hlpc	ld a,(hl): inc hl	;Get next char
+	and a
+	jr z,hlpc1		;zero is end of string
+	cp #80			;italic switch? (#80)
+	jr nz,hlpc2
+	xor b			;flip italic flag in B
+	ld b,a
+	jr hlpc			;get next char
+.hlpc2	push af
+	and #7f			;ignore spaces for now
+	cp " "			;is it a control code?
+	jr c,hlpc3
+	or b			;if not OR in italics (if switched on)
+.hlpc3	call #bb5a		;and print the char
+	pop af
+	and #80			;does a space follow?
+	jr z,hlpc
+	ld a," "
+	call #bb5a		;print a space
+	jr hlpc
+.hlpc1	pop bc
+	ret
+
+	;=== FORMATTED PRINT ===
+	;entry	hl points to text
+	;exit	hl points after
+	;	af corrupt
+
+.form_print
+	push bc
+	push de
+	push hl
+	call #BB69		;TXT GET WINDOW
+	inc d			;d=right most
+	pop hl
+.fp1	push hl
+	call fp_word		;get length of word
+	call #BB78		;TXT GET CURSOR
+	dec h
+	ld a,h
+	pop hl
+	add b			;cursor column+word length
+	inc d
+	cp d			;>last column?
+	call nc,crlf
+	dec d
+	cp d			;check for later
+	push af
+	call fp_print		;print word
+	pop af			;=last column?
+	jr z,fp2		;no space if so
+	xor a: or e		;end of string?
+	ld a," "
+	call z,#BB5A		;space if not
+.fp2	ld a,16: call #BB5A
+	xor a: or (hl)
+	jr nz,fp1		;end of string
+	inc hl			;point after end
+	pop de
+	pop bc
+	ret
+
+	;Find length of word
+	;b=length, e is non-zero if end of string met
+
+.fp_word
+	ld b,0
+	ld e,b
+.fpw1	inc e			;e nz
+	ld a,(hl)
+	and a
+	ret z			;zero (end of string)?
+	dec e			;e z
+	inc hl
+	inc b
+	and #80			;space?
+	ret nz
+	jr fpw1
+
+.fp_print
+	inc b: dec b
+	ret z			;zero length, no printing
+.fpp1	ld a,(hl): inc hl
+	and #7F
+	call #BB5A
+	djnz fpp1
+	ret
+
+	
+	;== Output a CRLF ==
+
+.crlf	ld a,13: call #bb5a
+	ld a,10: jp #bb5a
+
+	
+	;== Get filename from player ==
+	;exit	hl=address, b=len
+
+.input_fname
+	ld c,-1			;allow colon and stop
+	call input
+	ld hl,txtbuff
+	push hl
+	ld b,-1
+.i_f1	ld a,(hl): inc hl
+	inc b			;count chars in string
+	and a
+	jr nz,i_f1
+	pop hl
+	ret
+
+	
+	;== CHECK IF WORD WAS TYPED ==
+	;entry	a=word num
+	;exit	C true if found
+
+.typed	ld hl,words
+	ld b,a
+.typ1	ld a,(hl)		;word found?
+	and a			;end of list?
+	ret z			;not found!
+	cp b
+	scf: ret z		;found!
+	inc hl
+	jr typ1
+
+	;== LOAD game position from memory ==
+	;entry	ix=data address
+
+.mem_load
+	;Location links and headers
+	ld hl,(link)
+.r_l1	ld a,h: or l
+	jr z,r_l2		;end of list
+	push hl
+	inc hl: inc hl
+	inc hl: inc hl		;skip link and loc code
+	ld b,10
+.r_l3	ld a,(ix): inc ix
+	ld (hl),a: inc hl
+	djnz r_l3
+	pop hl
+	ld e,(hl): inc hl
+	ld d,(hl): ex de,hl
+	jr r_l1			;do next loc
+.r_l2
+
+	;Object links, number, status, attributes
+	ld hl,(objstart)
+.r_l4	ld b,6
+.r_l5	ld a,(ix): inc ix
+	ld (hl),a: inc hl
+	djnz r_l5
+	call skip_str
+	call skip_str		;skip name and description
+	inc hl: inc hl
+	ld a,(hl)
+	dec hl: dec hl		;end of list?
+	and a
+	jr nz,r_l4		;do next object
+
+	;Variables
+	ld hl,(varbase)
+	ld bc,(nr_vars)
+	sla c: rl b		;*2
+.r_l6	ld a,(ix): inc ix
+	ld (hl),a: inc hl	;load byte
+	dec bc
+	ld a,b: or c		;all done?
+	jr nz,r_l6
+	ret
+
+	;== SAVE game position to memory ==
+	;entry	ix=memory address for pos
+	;exit	ix=last address used+1
+	;	hl=start address, de=length
+	;	error if (memtop) reached
+
+.mem_save
+	push ix
+	;Location links and headers
+	ld hl,(link)
+.r_s1	ld a,h: or l
+	jr z,r_s2		;end of list
+	push hl
+	inc hl: inc hl
+	inc hl: inc hl		;skip link and loc code
+	ld b,10
+.r_s3	ld a,(hl): inc hl
+	call comp_a
+	djnz r_s3
+	pop hl
+	ld e,(hl): inc hl
+	ld d,(hl): ex de,hl
+	jr r_s1			;do next loc
+.r_s2
+
+	;Object links, number, status, attributes
+	ld hl,(objstart)
+.r_s4	ld b,6
+.r_s5	ld a,(hl): inc hl
+	call comp_a
+	djnz r_s5
+	call skip_str
+	call skip_str		;skip name and description
+	inc hl: inc hl
+	ld a,(hl)
+	dec hl: dec hl		;end of list?
+	and a
+	jr nz,r_s4		;do next object
+
+	;Variables
+	ld hl,(varbase)
+	ld bc,(nr_vars)
+	sla c: rl b		;*2
+.r_s6	ld a,(hl): inc hl	;save byte
+	call comp_a
+	dec bc
+	ld a,b: or c		;all done?
+	jr nz,r_s6
+
+	pop de			;calc start,len
+	push ix: pop hl
+	and a: sbc hl,de
+	ex de,hl
+	ret			;finished
+
+	
+	;== EXPAND AND DISPLAY A PICTURE FILE ==
+	;entry	hl=address of name
+	;Uses txtbuff to store picture information
+	;see also expand_restore
+
+.expand_pict
+	push hl
+	;Disable cassette messages
+	ld a,1
+	call #BC6B
+
+	;Store current screen information
+	ld ix,txtbuff
+	call #BC11		;SCR GET MODE
+	ld (ix),a: inc ix
+	ld a,15
+.exp_sink
+	push af
+	call #BC35		;SCR GET INK
+	ld (ix),c: inc ix
+	ld (ix),b: inc ix
+	pop af
+	dec a
+	jp p,exp_sink		;do next ink
+	call #BC3B		;SCR GET BORDER
+	ld (ix),c: inc ix
+	ld (ix),b: inc ix
+	call #BC41		;SCR GET FLASHING
+	ld (ix),l: inc ix
+	ld (ix),h
+
+	pop hl
+	ld b,-1
+	push hl
+.exp_p1	inc b			;count letters
+	ld a,(hl): inc hl
+	and a
+	jr nz,exp_p1
+	pop hl			;recover name start
+	ld (txtptr),sp		;error trap
+	ld de,(memtop)		;2K buffer
+	call #BC77		;CAS IN OPEN
+	cp 4			;screen image?
+	jp nz,save_err
+
+	;Get screen mode
+	call #BC80		;CAS IN CHAR
+	call #BC0E		;SCR SET MODE
+
+	;Get flashing speed
+	call #BC80
+	ld l,a
+	call #BC80
+	ld h,a
+	call #BC3E		;SCR SET FLASHING
+
+	;Get inks
+	ld a,15
+.get_inks
+	push af
+	call #BC80
+	ld b,a
+	call #BC80
+	ld c,a
+	pop af: push af
+	call #BC32		;SCR SET INK
+	pop af
+	dec a
+	jp p,get_inks
+
+	;Store border
+	call #BC80
+	ld b,a
+	call #BC80
+	ld c,a
+	call #BC38		;SCR SET BORDER
+
+	;=== DECOMPRESS ===
+
+.d_screen
+	ld hl,0
+	call #BC05		;offset must be 0
+	ld bc,200*256
+.d_sc1	push bc
+	ld a,c
+	call c_lineaddr		;get this line address
+	call #BC80
+	inc a			;literal line?
+	jr z,d_sc2
+	dec a
+	push hl
+	call c_lineaddr		;get address of copy line
+	pop de
+	push de
+	ld bc,80
+	call #B91B		;HI KL LDIR
+	pop hl
+	ld b,80
+.d_sc5	call #BC80
+.d_sc6	cp b			;position found?
+	jr z,d_sc7
+	inc hl
+	djnz d_sc6
+	jr d_sc3		;not found, new line
+.d_sc7	call #BC80
+	ld (hl),a
+	jr d_sc5		;next difference
+
+.d_sc2	ld b,80
+.d_sc4	call #BC80
+	ld (hl),a: inc hl
+	djnz d_sc4
+.d_sc3	pop bc
+	inc c
+	djnz d_sc1
+
+	call #BC7A		;CAS IN CLOSE, finished picture
+
+	ld a,(pic_wait)
+	and a			;wait for key and restore?
+	ret z
+	call #BB06		;KM WAIT KEY
+	;\/\/\/
+
+	;== RESTORE SCREEN AFTER EXPAND_PICT ==
+	;Restores picture information from txtbuff.
+	;see also expand_pict
+
+.expand_restore
+	ld ix,txtbuff
+	ld a,(ix): inc ix
+	call #BC0E		;SCR SET MODE
+	ld a,15
+.exp_rink
+	push af
+	ld c,(ix): inc ix
+	ld b,(ix): inc ix
+	call #BC32		;SCR SET INK
+	pop af
+	dec a
+	jp p,exp_rink		;do next ink
+	ld c,(ix): inc ix
+	ld b,(ix): inc ix
+	call #BC38		;SCR SET BORDER
+	ld l,(ix): inc ix
+	ld h,(ix)
+	jp #BC3E		;SCR SET FLASHING
+
+	
+	;RETURN LINE ADDRESS
+	;entry	a=line nr
+	;exit	hl=address
+	;	af,bc,de corrupt
+
+.c_lineaddr
+	ld l,a: ld h,0
+	ld de,0
+	jp #BC1D		;SCR DOT POSITION
+
+	
+
+	;== RUNTIMES FOR LANGUAGE ==
+
+	;== QUICKSAVE ==
+
+.r_quicksave
+	ld ix,(free_space)
+	call mem_save
+	ld (data_len),de	;store for reference by r_load
+	ret
+
+	;== QUICKLOAD ==
+
+.r_quickload
+	ld ix,(free_space)
+	jp mem_load
+
+	;== RESTART ==
+
+.r_restart
+	ld ix,(start_pos)
+	call mem_load
+	ld sp,(toplevel)
+	jp ad1			;start from scratch
+
+	;== Are we in the same area? ==
+	;entry	hl=loc code in area to check for
+
+.r_area	ld a,(loc+1)		;get HERE letter
+	cp a,h			;same?
+	ld hl,0: ret nz		;hl=flag
+	inc hl: ret
+
+	;== Display exits ==
+
+.r_exits
+	ld hl,(loc)		;this location
+	call find_loc
+	jp nc,err_noloc
+	push hl: pop ix
+	pop hl			;get address of inline strings
+	ld b,4			;4 directions
+	ld c,0			;flag for messages printed
+.r_e1	push bc
+	ld e,(ix+4)
+	ld d,(ix+5)		;get link
+	res 7,d			;ignore "been here" flag
+	ld a,d: or e		;is there a link?
+	jr nz,r_e2
+	call skip_str		;skip the string
+	pop bc
+	jr r_e3
+.r_e2	call hlprintc		;print the string for this direction
+	pop bc
+	inc c			;there HAS been a message!
+.r_e3	inc ix: inc ix		;point to next link
+	djnz r_e1
+	xor a: or c		;was there a message?
+	jr z,r_e4
+	call skip_str
+	jp (hl)			;return if so
+.r_e4	call hlprintc		;print "none" message
+	jp (hl)			;return to routine
+
+	;== Has player been at location? ==
+	;entry	hl=loc code
+
+.r_been	push hl
+	ld de,(loc)
+	and a: sbc hl,de	;BEEN HERE?
+	pop hl
+	jr nz,r_b1
+	ld a,(source)		;source stores this locations flag
+	and a
+	jr r_b2
+.r_b1	call find_loc
+	jp nc,err_noloc
+	push hl: pop ix
+	bit 7,(ix+5)		;check "been there" bit in NORTH link
+.r_b2	ld hl,0: ret z
+	inc hl: ret
+
+	;== Get key from keyboard ==
+
+.r_key	call #BB09
+	jr c,r_key		;flush buffer
+	call #BB06		;KM WAIT CHAR
+	ld h,0
+	ld b,a			;store symbol
+	call validlet
+	ld l,a: ret c		;done if letter
+	ld l,b: ret		;done for symbols
+
+	;== Get yes/no response ==
+
+.r_yesno
+	call r_key
+	ld hl,1
+	cp "Y": ret z
+	ld hl,0
+	cp "N": ret z
+	jr r_yesno
+
+	;== Display a Screen File ==
+
+.r_picture
+	pop hl			;address of name
+	push hl
+	call skip_str		;skip the name
+	ex (sp),hl		;swap return address for name address
+	jp expand_pict		;do the picture
+
+.r_picrestore
+	call #BB06		;wait for a key
+	jp expand_restore
+
+	;== Load machine code ==
+
+.r_loadmc
+	ld (txtptr),sp		;error trap
+	pop hl
+	ld b,-1
+	push hl
+.r_lmc1	inc b			;count letters
+	ld a,(hl): inc hl
+	and a
+	jr nz,r_lmc1
+	ex (sp),hl		;save return address, recover name start
+	ld de,(memtop)		;2K buffer
+	call #BC77		;CAS IN OPEN
+	jp nc,save_err
+	and %0001110
+	cp 2			;binary file?
+	jp nz,err_badmc
+	ld hl,(mc_size)
+	and a
+	sbc hl,bc		;check that file is not too large
+	jp c,err_badmc
+	ld hl,(mc_base)
+	call #BC83		;CAS IN DIRECT
+	jp nc,save_err
+	jp #BC7A		;CAS IN CLOSE
+
+	;== Print from file ==
+
+.r_printf
+	ld (txtptr),sp		;error trap
+	pop hl
+	ld b,-1
+	push hl
+.r_p1	inc b			;count letters
+	ld a,(hl): inc hl
+	and a
+	jr nz,r_p1
+	ex (sp),hl		;save return address, recover name start
+	ld de,(memtop)		;2K buffer
+	call #BC77		;CAS IN OPEN
+	jp nc,save_err
+.r_p2	call #BC80		;CAS IN CHAR
+	jp nc,#BC7A		;exit to CAS IN CLOSE
+	call #BB5A		;print char
+	jr r_p2
+
+	;== Sort nouns ==
+	;entry	hl=number of nouns to sort
+
+.r_sort	ld a,h: or l
+	ret z			;sort nothing!
+	dec hl			;sort for 0 to n-1
+	ld a,h: and a
+	jp nz,err_noitem	;check range...
+	or l: ret z		;sort one item!
+	ld a,l: and %11111000
+	jp nz,err_noitem	;...1 to 8
+.r_sor3	ld b,l
+	ld ix,objects
+	ld c,0
+.r_sor1	ld a,(ix+1)
+	cp (ix)			;smaller?
+	jr nc,r_sor2
+	ld d,(ix)
+	ld (ix),a
+	ld (ix+1),d		;swap
+	ld c,1			;remember that swapping has happened
+.r_sor2	inc ix
+	djnz r_sor1
+	xor a: or c		;did a swap happen?
+	jr nz,r_sor3		;go round again.
+	ret
+
+	;== SAVE game position ==
+
+.r_save	;Enable cassette messages
+	xor a
+	call #BC6B
+	ld (txtptr),sp		;save level for errors
+	call input_fname
+	ld de,(memtop)
+	call #BC8C		;CAS OUT OPEN
+	jp nc,save_err
+	ld ix,(free_space)
+	call mem_save		;save to memory
+	ld (data_len),de	;store for reference
+	ld a,15			;file type
+	call #BC98		;CAS OUT DIRECT data
+	jp nc,save_err
+	call #BC8F		;CAS OUT CLOSE
+	ret
+
+	;== LOAD game position ==
+
+.r_load	;Enable cassette messages
+	xor a
+	call #BC6B
+	ld (txtptr),sp
+	call input_fname
+	ld de,(memtop)
+	call #BC77		;CAS IN OPEN
+	jp nc,save_err
+	cp 15			;correct file type?
+	jp nz,save_err
+	ld hl,(data_len)	;check length of data
+	and a: sbc hl,bc
+	jp nz,save_err
+
+	ld hl,(free_space)
+	push hl
+	call #BC83		;CAS IN DIRECT
+	pop ix
+	jp nc,save_err
+	call mem_load		;load data
+
+	call #BC7A		;CAS IN CLOSE
+	ret c
+	;\/\/\/\/
+
+.save_err
+	ld sp,(txtptr)
+	call #BC7D
+	call #BC92		;abandon files
+	call pcprint
+	text "*** File error ***",0
+	ret			;return to game
+
+	;== Swap noun numbers ==
+	;entry	de=first object number
+	;	hl=second object number
+
+.r_swap	push hl
+	ld a,e
+	call get_objaddr
+	inc hl: inc hl		;point to first number
+	ex (sp),hl
+	ld a,l
+	call get_objaddr
+	inc hl: inc hl		;point to second number
+	pop de
+	ld b,(hl)
+	ld a,(de)
+	ld (hl),a
+	ex de,hl
+	ld (hl),b		;swap object numbers
+	ret
+
+	;== Link locations ==
+	;entry	a=link number (1-4)
+	;	de=location to link from
+	;	hl=location to link to
+
+.r_link	push hl: push af
+	ex de,hl
+	call find_loc		;Find "from" location
+	jp nc,err_noloc
+	ex de,hl
+	pop af
+	ld l,a
+	ld h,0
+	add hl,hl
+	add hl,de
+	inc hl: inc hl		;link address = link number*2 +place address+ 2
+	pop de
+	ld (hl),e
+	inc hl
+	ld (hl),d		;patch in link
+	ret
+
+	;== Return first object at location ==
+
+.r_firstat
+	call find_loc
+	jp nc,err_noloc
+	ld de,12
+	add hl,de		;Point to object list
+	ld e,(hl): inc hl
+	ld d,(hl)
+	ex de,hl
+	ld a,h: or l
+	ret z			;nothing here
+	inc hl: inc hl
+	ld l,(hl)		;Get object code
+	ld h,0
+	ret
+
+	;== DE>HL? ==
+
+.r_greater
+	and a: sbc hl,de
+	ld hl,0: ret nc
+	ld hl,1: ret
+
+	;== Random number ==
+.r_random
+	push hl
+	ld hl,(seed)
+	ld de,#4e6d
+	call mul_hl_de
+	ld de,#3039
+	add hl,de
+	push hl
+	call #bd0d		;KL TIME PLEASE
+	pop de
+	add hl,de
+	ld (seed),hl
+	pop de
+	call udiv_hl_de
+	ex de,hl
+	ret
+
+	;== Make status letters to object ==
+	;entry	a=mask
+	;	hl=obj number
+
+.r_make	push af
+	ld a,l
+	call get_objaddr	;find it's address
+	pop af
+	inc hl: inc hl: inc hl
+	or (hl)			;add mask letters
+	ld (hl),a
+	ret
+
+	;== Unmake status letters from object ==
+	;entry	a=mask
+	;	hl=obj number
+
+.r_unmake
+	push af
+	ld a,l
+	call get_objaddr	;find it's address
+	pop af
+	inc hl: inc hl: inc hl
+	cpl
+	and (hl)		;remove mask letters
+	ld (hl),a
+	ret
+
+	;== Does object have some status letters? ==
+	;entry	a=mask
+	;	hl=obj number
+	;exit	hl=flag (letters exit)
+
+.r_status
+	push af
+	ld a,l
+	call get_objaddr	;find it's address
+	pop af
+	inc hl: inc hl: inc hl
+	and (hl)		;test mask letters
+	ld hl,0: ret z
+	inc hl: ret
+
+	;== Print space ==
+
+.r_sp	ld a," ": jp #bb5a
+
+	;== Examine object ==
+
+.r_exam	ld a,l
+	call get_objaddr	;find it's address
+	ld de,6
+	add hl,de
+	call skip_str		;get description address
+	jp hlprintc
+
+	;== count objects at location ==
+	;entry	hl=location
+	;exit	hl=nr objects
+
+.r_count
+	call find_loc
+	jp nc,err_noloc
+	ld de,12
+	add hl,de		;point to link
+	ld b,-1
+.r_c1	ld e,(hl): inc hl
+	ld d,(hl)
+	ex de,hl		;move down list
+	inc b
+	ld a,h: or l		;end of list?
+	jr nz,r_c1
+	ld l,b
+	ld h,0
+	ret
+
+	;== get type object hl ==
+
+.r_item	dec hl
+	ld a,h: and a		;Check range (1-8)
+	jp nz,err_noitem
+	ld a,l: and %11111000
+	jp nz,err_noitem
+	ld de,objects
+	add hl,de		;calc address
+	ld e,(hl)		;get number
+	ld d,0
+	ex de,hl
+	ret
+
+	;== get address of variable ==
+	;entry	hl=var number
+	;exit	ix points to var
+
+.r_vars	push hl: push de
+	ld de,(nr_vars)
+	and a
+	sbc hl,de		;illegal var number?
+	pop de
+	pop hl
+	jp nc,err_novar
+	push hl
+	add hl,hl		;*2 (16 bit vars)
+	ld ix,(varbase)
+	ex de,hl
+	add ix,de
+	ex de,hl
+	pop hl
+	ret
+
+	;== Were multiple words typed? ==
+	;inline words, see e_typed
+
+.r_mtyped
+	pop hl			;get inline address
+
+.r_m2	ld a,(hl)		;get word number
+	and a			;end of this combination?
+	jr z,r_m1		;success!
+	inc hl
+	push hl
+	call typed
+	pop hl			;was it typed?
+	jr c,r_m2		;try next if so
+	call skip_str		;skip to next combination...
+	ld a,(hl)		;was that the last one?
+	and a
+	jr nz,r_m2		;...and try it if not
+	inc hl
+	push hl
+	ld hl,0: ret		;failure!
+
+.r_m1	call skip_str		;skip to end of combination
+	ld a,(hl)		;end of whole list?
+	and a
+	jr nz,r_m1
+	inc hl
+	push hl
+	ret			;hl=non zero address
+
+	
+	;== was word typed? ==
+	;entry	a=word num
+	;exit	hl=flag, word typed
+
+.r_typed
+	call typed
+	ld hl,0: ret nc
+	inc hl: ret c
+
+	;==== find object at location ====
+	;entry	hl=loc code
+	;	a = object number
+	;exit	de preserved if not found
+	;  else de=de OR 1
+	;	a preserved
+
+.r_find_obj
+	ld b,a
+	push bc: push de
+	push af
+	call find_loc		;find location
+	jp nc,err_noloc
+	pop af
+	ld de,12		;address list header
+	add hl,de
+	call find_obj		;find object
+	pop de: pop bc
+	ld a,b			;restore A
+	ret nc			;not found
+	ld a,e: or 1
+	ld e,a: ret		;found
+
+	
+	;hl=(hl==de)
+
+.r_equal
+	and a: sbc hl,de
+	ld hl,0: ret nz		;not equal
+	inc hl: ret		;equal
+
+	;hl=\hl
+
+.r_not	ld a,h: or l
+	ld hl,0: ret nz
+	ld hl,1: ret
+
+	;== EITHER ==
+
+.r_either
+	ld a,h: or d: ld h,a
+	ld a,l: or e: ld l,a
+	ret
+
+	;== BOTH ==
+
+.r_both	call r_logic: ex de,hl
+	call r_logic
+	ld a,l: and e: ld l,a
+	ret
+
+	;== WINDOW ==
+
+.r_window
+	pop ix			;return address
+	pop bc: dec bc: ld l,c
+	pop bc: dec bc: ld e,c
+	pop bc: dec bc: ld d,c
+	pop bc: dec bc: ld h,c
+	pop bc			;stream number
+	push ix
+	ld a,c
+	push hl
+	call #BBB4		;TXT STR SELECT
+	pop hl
+	push af
+	call #BB66		;TXT WIN ENABLE
+	pop af
+	jp #BBB4		;TXT STR SELECT back again
+
+	
+	;== convert HL to logic value ==
+
+.r_logic
+	ld a,h: or l
+	ld hl,1: ret nz
+	ld hl,0: ret
+
+	;== Get attribute address of object ==
+	;entry	hl=obj number
+	;exit	hl points to attrib code
+
+.attrib	ld a,l
+	call get_objaddr
+	inc hl: inc hl
+	inc hl: inc hl		;point to attribute
+	ret
+
+	
+	;==== ADVENTURE PROGRAM ====
+
+	
+.adventure
+	ld a,(saved)		;is this the saved version?
+	and a
+	jp z,ad1
+
+	push bc: pop hl		;raise memory limit to #B0FF
+	ld bc,(mtablen)
+	and a: sbc hl,bc
+	ld (txtptr),hl		;make room for matrix table
+
+	;== Initialise Disc ROM ==
+
+	ld c,7
+	call #BCCE		;INIT BACK the Disc ROM
+	ld de,2048
+	and a: sbc hl,de	;reserve 2K
+	ld (memtop),hl
+
+	;== Copy code to correct position (ROM) ==
+
+	IF romvers
+	ld bc,(game_len)
+	ld de,(game_addr)
+	ld hl,code_space
+	add hl,bc		;point to end of code
+	dec hl
+	lddr			;copy to correct position
+	ENDIF
+
+	;== Set up character set ==
+
+	ld de,(firstch)
+	ld a,d: and a		;are there any characters?
+	jr nz,nochars
+
+	ld de,(firstch)
+	ld hl,(txtptr)		;point to previously reserved space (see above)
+	push hl
+	call #BBAB		;SET M TABLE
+
+	ld bc,(mtablen)
+	pop de
+	ld hl,(mattab)
+	push hl
+	ldir			;copy matrices to table
+	pop hl
+	ld (free_space),hl
+				;allow memory saves to use old matrix table
+
+.nochars
+	call ad1		;force keypress after aborting
+	jp r_key
+
+.ad1	ld (toplevel),sp	;error trap
+
+	;Intercept ESCape control code
+	call #BBB1		;TXT GET CONTROLS
+	ld de,27*3
+	add hl,de		;point to ESC code
+	ld (hl),1		;1 parameter
+	inc hl
+	ld (hl),#B4
+	inc hl
+	ld (hl),#BB		;address of TXT STR SELECT
+
+	;Zero all variables
+	call cl_words		;clear typed words
+	ld bc,(nr_vars)
+	sla c: rl b		;*2 for 16 bit vars
+	dec bc
+	ld hl,(varbase)
+	push hl: pop de
+	inc de
+	ld (hl),0
+	ldir
+
+	ld a,(mode)
+	call #BC0E		;clear screen
+	ld hl,(startloc)
+	ld (loc),hl		;initial location
+	ld hl,desc_flg
+	ld (hl),1		;force initial description
+	ld hl,localbefore
+	ld (hl),0		;print formatting off
+	call #bd0d		;KL TIME PLEASE
+	ld (seed),hl		;random seed
+
+	call r_quicksave	;save initial location as quicksave
+				;(also sets up data_len for r_load)
+	;== Execute START code ==
+	ld hl,(start)
+	call #001E
+
+.adloop	call describe		;describe location
+	ld a,(ix+5)		;been here before?
+	and #80
+	ld (source),a		;remember if
+	set 7,(ix+5)		;and now we have!
+	push ix
+	call #001E		;PCHL to local "before" code routine
+	ld hl,(before)		;(leaves address of local AFTER code on stack)
+	call #001E		;do "before" code
+	call prompt		;prompt and parse input
+	pop hl
+	pop ix
+	push af
+	xor a
+	ld (desc_flg),a		;clear describe flag...
+	ld (pict_flg),a		;...and picture flag
+	pop af
+	jr c,direct		;direction verbs
+	call #001E		;do local "after" code
+	ld hl,(after)
+	call #001E		;do "after" code
+	jr adloop
+
+	;== Direction verbs ==
+
+.direct	sla a
+	ld e,a: ld d,0		;de=direction verb*2
+	add ix,de		;point to direction code
+	ld e,(ix+2)
+	ld d,(ix+3)
+	res 7,d			;ignore "been here" marker
+	ld a,d: or e		;can you go that way?
+	jr z,nodirec
+	ld (loc),de		;move
+	ld a,1
+	ld (desc_flg),a		;force description
+	jp adloop
+.nodirec
+	xor a
+	ld (desc_flg),a		;stop description
+	ld hl,(cantgo)
+	call hlprintc		;display message
+	jp adloop
+
+	
+	;== PROMPT AND PARSE INPUT ==
+	;c true if direction verb, a=verb
+	;else all words parsed into .words
+	;	and nouns into .objects
+
+.prompt	ld c,0			;letters only
+	call input		;get input from player
+	call crlf
+	call cl_words		;clear all previous typed words
+	ld b,0			;object count
+
+	ld hl,txtbuff
+.pr1	call skip_sp		;skip spaces
+	ld a,(hl)
+	and a			;end of input?
+	jr z,pr4
+
+	bit 7,(ix)		;room for another word?
+	jr nz,pr4		;can do no more if not!
+
+	bit 7,(iy)		;room for another object?
+	jr nz,pr3
+	ld c,#80
+	push bc: push hl
+	call find_wd		;is it an object?
+	pop hl: pop bc
+	jr nc,pr3
+	ld (iy),a
+	ld (ix),a
+	inc iy
+	inc ix
+	inc b
+.pr3
+	bit 7,(ix)		;room for another word?
+	jr nz,pr4		;can do no more if not!
+
+	ld c,#00
+	push bc: push hl
+	call find_wd		;is it a word?
+	pop hl: pop bc
+	jr nc,pr2
+	cp 5			;direction verb?
+	ret c
+	ld (ix),a		;add word to list
+	inc ix
+.pr2
+	call skip_let		;skip the word
+	ld a,(hl)		;end of input?
+	and a
+	jr nz,pr1
+
+.pr4	ld hl,(varbase)
+	ld (hl),b		;store nr.obj in variable #0
+	inc hl
+	xor a
+	ld (hl),a
+	ld (ix),a
+	ld (iy),a		;terminate word lists
+	ret			;with nc
+
+.skip_sp
+	ld a," "
+.skip1	cp (hl): ret nz
+	inc hl
+	jr skip1
+
+	;== Clear typed words and objects ==
+	;exit	ix=words, iy=objects
+
+.cl_words
+	ld ix,words		;start of lists of words...
+	ld (ix+8),-1		;(up to 8 words)
+	ld iy,objects		;...and objects
+	push iy: pop hl
+	ld b,8			;blank out unused objects
+	xor a			;word zero never exists
+.probl	ld (hl),a
+	inc hl
+	djnz probl
+	ld (iy+8),-1		;(up to 8 objects)
+	ret
+
+.input	ld hl,txtbuff		;address of input buffer
+	ld b,0			;count of typed letters
+.in1	ld (hl),0		;terminate input
+	call #bb8a		;put cursor on screen
+	call #bb06		;wait for key
+	push af
+	call #bb8d		;remove cursor
+	pop af
+	cp 13			;ENTER pressed?
+	ret z
+	cp 127			;DELETE?
+	jr nz,in3
+	ld a,b: and a
+	jr z,in1		;ignore if string empty
+	dec hl
+	dec b
+	call pcprint		;remove char
+	text 8,16,0
+	jr in1
+.in3	cp " "			;is it space?
+	jr z,in2
+	push bc
+	inc c			;c=-1?
+	pop bc
+	jr nz,in4
+	cp "."			;stop?
+	jr z,in2
+	cp ":"			;colon?
+	jr z,in2
+	cp "0"			;digit?
+	jr c,in4
+	cp "9"+1
+	jr c,in2
+.in4	call validlet		;is it a letter?
+	jr nc,in1		;ignore if not
+.in2	ld (hl),a		;put letter in text
+	inc hl
+	ld (hl),0		;terminate string
+	call #bb5a		;echo to screen
+	inc b			;inc char count
+	ret z			;finished if full
+	jr in1
+
+	
+
+	;== DESCRIBE & DISPLAY PICTURE IF REQUESTED ==
+	;exit	ix=location block
+	;	hl=local code address
+
+.describe
+	ld hl,(loc)
+	call find_loc
+	jp nc,err_noloc
+	push hl: pop ix		;save block address in ix
+	ld de,14
+	add hl,de		;point at picture filename
+
+	ld a,(hl)
+	and a			;is there a picture?
+	jr z,no_picture
+	ld a,(pict_flg)		;is a picture requested?
+	cpl
+	and (ix+5)		;have we been here?
+	and #80			;ignore irrelevant bits
+	jr nz,no_picture	;no picture
+	push hl: push ix
+	call expand_pict
+	pop ix: pop hl
+
+.no_picture
+	call skip_str		;skip filename
+
+	ld a,(desc_flg)
+	and a
+	jr z,skip_str		;don't describe if not requested
+	push hl
+
+	push bc
+	push de
+	push ix
+	ld hl,(desccode)
+	call #001E		;do pre-decription code
+	pop ix
+	pop de
+	pop bc
+
+	ld hl,(descstr)		;print option string
+	call hlprintc
+
+	pop hl
+	jp hlprintc		;print description
+
+.skip_str
+	ld a,(hl): inc hl
+	and a
+	jr nz,skip_str
+	ret
+
+	
+	;== VARIABLES == (ROM version has these in low memory)
+	;* indicates variable used at runtime
+
+.toplevel	word 0		;Top level of stack pointer for errors *
+.txtptr		word 0		;Start of text *
+.txtbuff	rmem 258,0	;Next line of text/typed input buffer *
+.line_nr	word 0		;Number of lines got
+.link		word 0		;link to last location defined *
+.cwords		word 32767	;Maximum number of words before error
+.stattab	rmem 8,0	;Status letter table...
+		byte -1		;...with end marker
+		rmem 5,0
+.dh_buff	byte 0		;Buffer for number conversions *
+.memtop		word 0		;Top of available memory *
+.start		word abort	;Address of START code *
+.desccode	word 0		;Address of DESCRIPTION code *
+.before		word abort	;Address of BEFORE code *
+.after		word abort	;Address of AFTER code *
+.startloc	word 0		;Start location *
+.desc_flg	word 0		;Description request flag *
+.pict_flg	byte 0		;Picture request flag *
+.mode		byte 0		;Screen mode of game *
+.nr_vars	word 0		;Number of variables *
+.varbase	word 0		;Address of first variable *
+.words		rmem 17,0	;space for word... *
+.objects	rmem 9,0	;...and object lists *
+.objstart	word 0		;Address of first object in memory *
+.cantgo		word 0		;String message for "can't go that way" *
+.seed		word 0		;Random number seed *
+.source		byte 0		;Non zero if reading from file. *
+.firstch	word 256	;First char in matrix tables *
+.mattab		word 0		;Address of tables *
+.mtablen	word 1		;Length of table in bytes *
+.saved		byte 0		;Set to 1 when finished version is saved. *
+.wordlist	word 0		;Address of word list *
+.messages	word 0		;Address of messages *
+.descstr	word 0		;Address of string printed before description *
+.localbefore	byte 0		;set to one if LOCAL BEFORE is being compiled *
+.start_pos	word 0		;Address of saved start position of game *
+.free_space	word 0		;Address of space at end of compilation *
+.data_len	word 0		;Length of a saved file in bytes *
+.mc_base	word 0		;Address of buffer
+.mc_size	word 0		;Size of buffer
+.pic_wait	byte -1		;Flag which waits for key after picture
+IF romvers
+.game_addr	word 0		;Address of compiled code
+.game_len	word 0		;length of compiled code
+ENDIF
+
+	;== COMPILED CODE ==
+
+	;== Special locations == (low memory if ROM version)
+
+.limbo	word 0,2		;the following vars are SAVEd
+.loc	word 0,0,0,0		;player's current location
+.limbol	word 0			;Link to first object in limbo
+	byte 0			;picture
+	byte "LIMBO",0		;description
+	pop hl: call #001E: ret	;local before and after
+
+IF romvers
+.objectlen	equ @-objectcode
+.basicver	byte 0		;version of onboard BASIC (not copied from ROM)
+ENDIF
+
+.code_space			;RAM ADLAN object code, or ROM BASIC start
+
+IF romvers
+	org @			;put location pointer back to normal
+ENDIF

@@ -1,0 +1,1998 @@
+	;==============================
+	;== ADLAN ADVENTURE LANGUAGE ==
+	;==       SUB-FILE 1         ==
+	;==   Last edited 29MAR90    ==
+	;==============================
+
+	; Copyright (C) 1987, 1999 Richard Brooksby.  All rights
+	; reserved.  You may make and distribute verbatim copies of
+	; this document provided that you retain as they appear all
+	; copyright and licence notices.  You may NOT charge a fee for
+	; this document or for distributing this document.  You may
+	; NOT make or distribute derivative works (modified versions)
+	; of this document without the express written permission of
+	; the copyright holder.
+	;
+	; This copyright notice was added on 1999-09-18.
+
+	;== OPTIONS ==
+
+	call pcprint
+	text "Compiling options...",13,10,0
+	call skip_bl
+	ld de,k_option
+	call checkword
+
+	;Screen mode option
+	call skip_bl
+	call convert		;Screen mode
+	ld a,d: and a		;modes 0,1,2 acceptable
+	jp nz,err_overfl
+	ld a,e: cp 3
+	jp nc,err_overfl
+	ld (mode),a
+	call skip_bl
+	cp ";": inc hl
+	jp nz,err_syntax
+
+	;Number of variables
+	call skip_bl
+	call convert		;Number of variables
+	inc de			;always one (#0)
+	ld a,d: or e
+	jp z,err_overfl		;check for 65535
+	push hl
+	push de
+	ex de,hl
+	ld (nr_vars),hl
+	dec hl			;don't include #0 in display
+	call disp_hl
+	call pcprint
+	text " variables created.",13,10,0
+	pop hl
+	add hl,hl		;16 bit vars
+	ex de,hl
+	pop hl
+	ld (varbase),ix		;base of variables
+	add ix,de		;move comp pointer up
+	jp c,err_overfl
+	call skip_bl		;(their position is after word list.)
+	cp ";": inc hl
+	jp nz,err_syntax
+
+	;Message for bad directions
+	ld (cantgo),ix
+	call comp_str
+	cp ";": inc hl
+	jp nz,err_syntax
+
+	;Message before descriptions
+	ld (descstr),ix
+	call comp_str
+	cp ";": inc hl
+	jp nz,err_syntax
+
+	call skip_bl
+	ld de,k_eoption		;End options?
+	call keyword
+	jr z,no_mc
+
+	;Machine code buffer
+	call convert		;size of machine code buffer
+	push hl
+	ld (mc_base),ix
+	ld (mc_size),de
+	add ix,de
+	ex de,hl
+	call disp_hl
+	call pcprint
+	text " bytes reserved for machine code at ",0
+	ld hl,(mc_base)
+	call disp_hl
+	call pcprint
+	text ".",13,10,0
+	pop hl
+
+	call skip_bl
+	cp ";": inc hl
+	jp nz,err_syntax
+	call skip_bl
+	ld de,k_eoption		;End options?
+	call checkword
+.no_mc
+
+	;== MESSAGES ==
+
+	call pcprint
+	text 10,"Compiling messages...",13,10,0
+	call skip_bl
+	ld de,k_mess
+	call checkword
+
+	ld (messages),ix
+
+.mess1	call skip_bl
+	ld de,k_emess
+	call keyword
+	jr z,messx
+
+	ld a,(hl): inc hl
+	cp "$"			;numbered message?
+	jr z,mess2
+	call validlet
+	jp nc,err_badmess
+	call statuslet
+	ld e,a: ld d,0
+	call comp_de		;compile status mask
+	jr mess3
+.mess2	call convert
+	ld a,d: or e
+	jp z,err_badmess	;numbers from 1...
+	bit 7,d			;...up to 32767
+	jp nz,err_badmess
+	set 7,d
+	call comp_de
+.mess3	call comp_str		;compile the message
+	cp ";": inc hl
+	jp nz,err_syntax
+	jr mess1
+.messx	ld de,0
+	call comp_de		;terminate list
+
+
+	;== Start word list ==
+
+	xor a
+	call comp_a		;last word number=0
+	ld (wordlist),ix
+	call comp_a		;end of list
+
+	;== COMPILE WORD LISTS ==
+
+	call pcprint
+	text 10,"Compiling word lists...",13,10,0
+
+	call skip_bl
+	ld de,k_words
+	call checkword		;Check for WORDS command
+
+.cwl1	call skip_bl
+	ld de,k_ewords		;End of word list?
+	call keyword
+	jr z,cwlx
+	ld d,0
+	call comp_words		;Compile a list of words
+	cp ";"			;Terminator should be semicolon.
+	jp nz,err_syntax
+	jr cwl1			;Do next words
+.cwlx
+
+	;== COMPILE OBJECTS LIST ==
+
+	call pcprint
+	text 10,"Compiling objects...",13,10,0
+
+	call skip_bl
+	ld de,k_objects
+	call checkword
+
+	;== Reserve space for object names ==
+	ld de,20
+	call skip_bl
+	cp "["			;Is there a number?
+	jr nz,ors1		;default if not.
+	inc hl
+	call skip_bl
+	call convert		;convert number
+	call skip_bl
+	cp "]"			;Is other bracket there?
+	jp nz,err_syntax
+	inc hl
+.ors1	push hl
+	push de: pop hl
+	push hl
+	call disp_hl
+	call pcprint
+	text " noun slots reserved.",13,10,0
+	pop hl
+	ld (cwords),hl		;limit future words (nouns)
+	push hl: pop de
+	add hl,hl		;*2
+	add hl,hl		;*4
+	add hl,de		;*5
+	ex de,hl
+	inc de			;+1 for end zero
+	add ix,de		;move compiler pointer up
+	pop hl
+
+	ld de,0
+	ld (link),de		;Objects are tied by this link
+	ld (objstart),ix	;Save start address of objects
+
+.obj1	call skip_bl
+	ld de,k_eobjects
+	call keyword
+	jp z,objx		;End of objects?
+
+	ld de,(link)
+	push ix
+	call comp_de		;Compile link to previous object...
+	pop de
+	ld (link),de		;...and store address for next link.
+
+	;== nouns ==
+	ld d,#80
+	push ix
+	call comp_words		;Compile list of names
+	pop ix
+	cp ","			;comma is terminator
+	jp nz,err_syntax
+	ld a,c
+	call comp_a		;Compile object number
+
+	;== Status letters ==
+
+	call statusmask
+	ld a,c
+	call comp_a
+	call skip_bl
+	cp ",": inc hl
+	jp nz,err_syntax
+
+	;== Extra attribute ==
+
+	call skip_bl
+	call convert		;Convert attribute (0 if none)
+	call comp_de		;Compile it.
+	call skip_bl
+	cp ","			;Should be followed by comma.
+	inc hl
+	jp nz,err_syntax
+
+	;== Object name ==
+
+	call comp_str		;Compile string
+	cp ","
+	inc hl
+	jp nz,err_syntax
+
+	;== Object description ==
+
+	call comp_str		;Compile another string
+	cp ";"
+	inc hl
+	jp nz,err_syntax
+
+	jp obj1			;Do next object
+
+.objx	xor a
+	call comp_a		;terminate for get_objaddr routine
+	call comp_a
+	call comp_a
+	push hl
+	ld a,"(": call #bb5a
+	ld hl,(cwords)
+	call disp_hl
+	call pcprint
+	text " unused slots)",13,10,0
+
+	;== Put all objects into LIMBO ==
+	ld hl,(link)
+	ld (limbol),hl
+
+	pop hl
+
+
+	;== COMPILE PLACES ==
+
+	call pcprint
+	text 10,"Compiling places...",13,10,0
+
+	call skip_bl
+	ld de,k_places
+	call checkword
+
+	ld de,limbo		;Places threaded to limbo
+	ld (link),de
+
+	;== Get start location ==
+
+	call skip_bl
+	cp "[": inc hl
+	jp nz,err_nostrt
+	call skip_bl
+	call get_loc
+	ld (startloc),de
+	call skip_bl
+	cp "]": inc hl
+	jp nz,err_syntax
+
+.loc1	call skip_bl
+	ld de,k_eplaces		;End of locations?
+	call keyword
+	jp z,locx
+
+	;== Get Location code ==
+
+	call skip_bl
+	call get_cloc		;Get this location's code (can be CARRY)
+	cp ","			;(terminated with comma)
+	jp nz,err_syntax
+	inc hl
+	push de
+
+	push hl
+	ex de,hl
+	call find_loc		;Check for unique location
+	jp c,err_duploc
+	pop hl
+
+	;== Link to previous location ==
+
+	ld de,(link)
+	push ix
+	call comp_de
+	pop de
+	ld (link),de
+
+	;== Compile Location code ==
+
+	pop de
+	call comp_de
+
+	;== Directions ==
+
+	ld b,4
+.loc2	push bc
+	call skip_bl
+	cp "-"			;Can't go that way?
+	jr nz,loc3
+	inc hl
+	ld de,0
+	call comp_de		;Compile null direction
+	jr loc4
+.loc3	call get_loc		;Get simple location code
+	call comp_de		;Compile it
+.loc4	pop bc
+	djnz loc2
+	call skip_bl
+	cp ","			;Last one followed by a comma
+	inc hl
+	jp nz,err_syntax
+
+	;== Objects here ==
+
+	ld de,0
+	call comp_de		;no objects here
+
+.loch	call skip_bl
+	call validlet
+	jr nc,lochx		;End of objects here list?
+	ld c,#80		;look for nouns
+	call find_word		;Identify object named
+	push hl
+	ld de,limbol		;move it from limbo...
+	push ix: pop hl
+	dec hl: dec hl		;To here
+	call move_obj
+	ld hl,erm_noobj
+	jp nc,error
+	pop hl
+	call skip_let		;Skip the word
+	jr loch
+.lochx	cp ","			;List should end with a comma
+	inc hl
+	jp nz,err_syntax
+
+
+	;== Check for and compile location picture ==
+
+	call skip_bl
+	ld de,k_pict
+	call keyword		;is there a PICTURE?
+	jr z,comp_pict
+	xor a
+	call comp_a		;compile a null
+	jr comp_desc		;compile description
+.comp_pict
+	call comp_str		;compile the filename string
+	cp ","
+	inc hl
+	jp nz,err_syntax
+	                
+	;== Compile description ==
+
+.comp_desc
+	call comp_str
+	cp ","
+	inc hl
+	jp nz,err_syntax
+
+	;== Compile local code ==
+
+	;Local "before" code
+	ld a,-1
+	ld (localbefore),a	;program security. certain commands not allowed
+	call comp_code
+	xor a
+	ld (localbefore),a
+	ld de,#CDE1		;POP HL		(This will leave the address of the local
+	call comp_de		;		after code on the stack.)
+	ld de,#001E		;CALL PCHL
+	call comp_de
+	call skip_bl
+	cp ",": inc hl
+	jp nz,err_syntax
+	;Local "after" code
+	call comp_code
+	ld a,#C9
+	call comp_a		;Terminate code
+
+	;== End of location ==
+
+	call skip_bl
+	cp ";"
+	jp nz,err_syntax
+	inc hl
+	jp loc1
+.locx
+
+	;== COMPILE "START" CODE IF PRESENT ==
+
+	ld (start),ix		;Start of code in memory
+
+	call skip_bl		;is there any START code?
+	ld de,k_start
+	call keyword
+	jp nz,no_start
+
+	call pcprint
+	text 10,"Compiling START routine...",13,10,0
+
+	call comp_code		;compile to MC
+
+.no_start
+	ld a,#C9
+	call comp_a		;terminate code
+
+
+	;== COMPILE "DESCRIPTION" CODE IF PRESENT ==
+
+	ld (desccode),ix	;Start of code in memory
+
+	call skip_bl		;is there any DESCRIPTION code?
+	ld de,k_description
+	call keyword
+	jp nz,no_desc
+
+	call pcprint
+	text 10,"Compiling DESCRIPTION routine...",13,10,0
+
+	call comp_code		;compile to MC
+
+.no_desc
+	ld a,#C9
+	call comp_a		;terminate code
+
+
+	;== COMPILE "BEFORE" CODE ==
+
+	call pcprint
+	text 10,"Compiling BEFORE routine...",13,10,0
+
+	call skip_bl
+	ld de,k_before
+	call checkword
+	ld (before),ix		;Start of code in memory
+	call comp_code		;Compile to MC
+	ld a,#C9
+	call comp_a		;terminate code
+
+	;== COMPILE "AFTER" CODE ==
+
+	call pcprint
+	text 10,"Compiling AFTER routine...",13,10,0
+
+	call skip_bl
+	ld de,k_after
+	call checkword
+	ld (after),ix		;Start of code in memory
+	call comp_code		;Compile to MC
+	ld a,#C9
+	call comp_a		;terminate code
+
+	;== SAVE START POSITION ==
+
+	ld (start_pos),ix
+	call mem_save
+	ld (free_space),ix	;remember area for memory saves
+
+	;== SIGN OFF ==
+
+	call #BC7A		;close any input file
+
+	call pcprint
+	text 10,"Compilation complete: ",0
+	push ix: pop de
+	ld hl,(memtop)
+	and a: sbc hl,de
+	call disp_hl
+	call pcprint
+	text " bytes remaining. ",0
+	ld hl,(mc_base)
+	ld a,h: or l		;machine code buffer?
+	jr z,so1
+	call pcprint
+	text "Machine code buffer at ",0
+	call disp_hl
+.so1	call pcprint
+	text 13,10,10
+	text 16,24," Compiled code ",164," Richard Brooksby ",24,13,10
+	text 10," Type R to run, S to save, any other key to exit.",13,10,0
+
+	call #BB06
+	call validlet
+	cp "R"
+	jp z,adventure
+	cp "S"
+	ld a,0
+	jp nz,#BBB4		;back to stream 0
+	;\/\/\/
+
+	;== SAVE ADVENTURE ==
+
+	IF romvers
+	call pcprint
+	text 10,"Saving will clear the text in memory. Are you sure? (Y or N)"
+	text 13,10,0
+	call r_yesno
+	ld a,h: or l
+	ret z
+	ENDIF
+
+	call pcprint
+	text 10,"Enter filename for finished adventure.",13,10
+	text 16,24,"*",24,32,0
+	ld c,-1
+	call input_fname
+	xor a
+	call #BC6B		;enable cassette messages
+	ld de,(memtop)
+	push ix
+	call #BC8C		;CAS OUT OPEN
+	ld hl,erm_nofile
+	jp nc,error
+
+	;== Copy any special character set to end of adventure ==
+
+	ld hl,256
+	ld (firstch),hl		;first char in table
+	call #BBAE		;GET M TABLE
+	jr nc,notable
+	push af
+	call pcprint
+	text 13,10,10,"Copying character set...",13,10,0
+	pop af
+	push hl
+	ld hl,256
+	ld e,a: ld d,0
+	ld (firstch),de
+	and a: sbc hl,de;(256-first char)*8
+	add hl,hl
+	add hl,hl
+	add hl,hl		;...to calculate length of table
+	ld (mtablen),hl		;remember length for when symbols are used.
+	push hl: pop bc		;length
+	push ix: pop de		;destination
+	ld (mattab),de
+	add ix,bc
+	call comp_a		;check memory is OK
+	dec ix
+	pop hl			;source
+	ldir			;copy matrices
+
+	ld (free_space),ix	;point after matrices
+
+.notable
+	IF romvers
+	ld hl,save_abort	;prevent any return
+	push hl
+	ld (toplevel),sp
+
+	push ix: pop hl
+	ld de,(game_addr)
+	push de
+	and a: sbc hl,de	;calculate game length
+	ld (game_len),hl
+	push hl
+	pop bc
+	ld de,code_space
+	pop hl
+	ldir			;copy object code to end of runtimes
+	push de: pop ix		;ix points to end of low code+1
+	dec hl			;point game_addr at end of code
+	ld (game_addr),hl
+	ENDIF
+
+	call pcprint
+	text 13,10,10,"Saving...",0
+
+	ld a,1
+	ld (saved),a		;tell adventure it's the real thing
+
+	IF romvers
+	ld hl,(game_addr)
+	ld de,#003F		;length=end-#0040+1
+	and a: sbc hl,de
+	ex de,hl
+	ld hl,#0040
+	ELSE
+	ld hl,objectcode	;Start of necessary code
+	pop de
+	push hl
+	ex de,hl
+	and a: sbc hl,de	;Length of code
+	ex de,hl
+	pop hl
+	ENDIF
+	ld bc,adventure		;Entry address
+	ld a,%10		;Binary type
+	call #BC98		;CAS OUT DIRECT
+	ld hl,erm_nofile
+	jp nc,error
+	call #BC8F		;CAS OUT CLOSE
+	call pcprint
+	text "Ok.",13,10,10,0
+	IF romvers
+	call pcprint
+	text "Press any key to run.",0
+	call #BB06
+	ld c,#FF
+	ld hl,adventure
+	jp #BD16		;MC START PROGRAM
+
+.save_abort
+	call pcprint
+	text "Press any key to reset.",0
+	call #BB06
+	rst 0
+
+	ELSE
+	xor a
+	ld (saved),a		;back to normal
+	ret
+	ENDIF
+
+	;== GET LOCATION CODE IN TEXT ==
+	;entry	hl points to text
+	;exit	de=loc code
+	;	a=terminator
+
+.get_cloc
+	ld de,k_carry
+	call keyword		;is it the CARRY location?
+	ld de,1
+	jp z,skip_bl
+
+.get_loc			;Get simple location
+	ld a,(hl): inc hl
+	call validlet		;Get initial letter
+	jp nc,err_badloc
+	push af
+	call convert		;Get following number
+	xor a: or d
+	jp nz,err_overfl	;numbers from 0 to 255 only
+	pop af
+	ld d,a			;d,e=letter,number
+	ld a,(hl)
+	call validlet
+	jp c,err_badloc		;must end in some symbol
+	jp skip_bl
+
+
+	;== COMPILE STRING, COMPRESSING ==
+	;string	delimeters are < and >
+	;exit	a=next non-blank char after delimeter
+	;	compiles italic toggle (~) into #80 in string
+	;	hl points to that char
+
+.comp_str
+	call skip_bl
+	cp "<": inc hl
+	jp nz,err_syntax
+
+	ld a,(hl)
+	cp " "			;first char is space?
+	jr nz,cps1
+	call comp_a		;compile it straight
+	inc hl
+.cps1	ld a,(hl): inc hl	;Process next char
+	cp ">"			;end of string?
+	jr z,cpsx
+	cp " "			;Space?
+	jr z,cps2
+	cp 13			;end-of-line
+	jr z,cps3
+	cp "\"			;CRLF marker?
+	jr z,cps4
+	cp "^"			;control code?
+	jr z,cps5
+	cp "~"			;italic toggle?
+	jr z,cps6
+	cp "<"			;line ignore?
+	jr z,cps7
+
+	;Normal char
+.cps8	call comp_a
+	jr cps1
+
+	;End of string
+.cpsx	xor a
+	call comp_a		;terminate with null
+	jp skip_bl		;move to next char
+
+	;Space
+.cps2	bit 7,(ix-1)		;has last char already been "spaced"?
+	jr nz,cps8		;compile as normal if so
+	set 7,(ix-1)		;else "space" it
+	jr cps1
+
+	;End of line
+.cps3	call get_line		;get next line
+.cps4	ld de,#0A0D		;(CRLF marker)
+	call comp_de		;compile CRLF into string
+	jr cps1
+
+	;Control code
+.cps5	ld a,(hl): inc hl
+	call validlet
+	sub a,"@"		;convert next char to control code
+	jp z,err_badch		;zero not allowed
+	cp " "
+	jp nc,err_badch		;codes from 1-31 only
+	jr cps8			;compile the code
+
+	;Italic marker
+.cps6	ld a,#80		;#80 is marker number
+	jr cps8			;compile it
+
+	;Line ignore
+.cps7	call get_line
+	jr cps1			;ignore rest of line and start the next
+
+
+	;== BUILD A MASK FROM STATUS LETTERS ==
+	;exit	c=mask, b=nr letters included
+
+.statusmask
+	call skip_bl
+	ld c,0			;build mask in c
+	ld b,0
+.sm1	ld a,(hl)
+	call validlet
+	ret nc			;first non letter terminates mask
+	inc hl
+	push bc
+	call statuslet		;find or create letter
+	pop bc
+	or c			;add to mask
+	ld c,a
+	inc b
+	jr sm1
+
+
+	;== FIND STATUS LETTER OR CREATE NEW ONE ==
+	;entry	a=letter to find
+	;exit	a=status letter mask
+	;	bc corrupt
+
+.statuslet
+	push hl
+	ld c,%00000001
+	ld hl,stattab-1
+	ld b,a
+.sl1	inc hl
+	ld a,(hl)
+	and a			;End of list? (not found, but room for new one)
+	jr z,sl2
+	cp -1			;End of table? (not found, no room)
+	jp z,err_status
+	cp b			;Status letter found?
+	jr z,sl3
+	sla c			;Shift mask left
+	jr sl1
+.sl3	ld a,c
+	pop hl
+	ret			;Letter found, mask in a
+.sl2	ld (hl),b		;Make new status letter
+	pop hl
+	ld a,c
+	ret
+
+
+	;== CHECK FOR ESCAPE ==
+
+.escape	push af
+	call #BB09		;KM READ CHAR
+	cp #FC			;escape token?
+	jr z,esc1
+	pop af
+	ret
+.esc1	call #BB8A		;PLACE CURSOR
+	call #BB06		;KM WAIT CHAR
+	push af
+	call #BB8D		;REMOVE CURSOR
+	pop af
+	cp #FC			;another escape token?
+	jp z,err_escape
+	pop af
+	ret
+
+
+	;== COMPILE LIST OF WORDS AT HL ==
+	;eg. SPLAT/SPLOT/SPUNGE/SX;
+	;entry	d=0 for word, #80 for object
+	;exit	a=terminator char (above is semicolon)
+	;	c=assigned word number
+	;	ix=last byte added+1
+	;	hl points after text
+	;(cwords) is decremented with each word,
+	;	and an error induced if this goes
+	;negative.
+
+.comp_words
+	push hl
+	ld hl,(wordlist)
+	xor a: ld b,a: ld c,a
+	cpir			;Find end of word list
+	dec hl
+	push hl: pop ix		;point ix to free space
+	dec hl
+	ld c,(hl)
+	inc c			;Assign new word number
+	pop hl			;restore text pointer
+
+.cw6	call skip_bl
+	ld b,4			;Length of words truncated/padded to 4 chars
+	push de
+.cw1	ld a,(hl)
+	call validlet
+	jr c,cw2		;not end of word
+				;Pad word out
+	ld a,b
+	cp 4			;how long was word?
+	jp z,err_syntax		;must have some length!
+	and a			;Word was at end anyway
+	jr z,cw5
+.cw4	ld (ix)," ": inc ix
+	djnz cw4		;Pad with spaces
+	jr cw5
+.cw2	inc hl
+	or d			;set bit 7 for objects
+	ld d,0			;stop bit setting
+	ld (ix),a		;compile letter
+	inc ix
+	djnz cw1		;up to 4 letters
+
+	;Skip rest of word
+.cw3	ld a,(hl): inc hl
+	call validlet
+	jr c,cw3
+	dec hl
+.cw5	push hl
+	ld de,1
+	ld hl,(cwords)
+	and a
+	sbc hl,de		;sub 1 from count
+	ld (cwords),hl
+	ld hl,erm_vword
+	jp c,error		;error if underflows
+	pop hl
+	pop de			;Recover mask
+	ld (ix),c		;Add assigned word number
+	inc ix
+	call skip_bl		;find next char
+	inc hl
+	cp "/"			;another alternative?
+	jp z,cw6
+	ld (ix),0		;terminate list
+	inc ix
+	ret			;finished, a=terminator
+
+
+	;== CHECK KEYWORD IS THE SAME AS TEXT ==
+	;as keyword, but induces error
+
+.checkword
+	call keyword
+	ret z
+	jp err_unex
+
+	;== COMPARE KEYWORD TO TEXT ==
+	;entry	hl=text, de=keyword
+	;exit	z true if same, hl points after keyword, de points to null
+	;	else hl preserved, de corrupt
+	;	af corrupt
+
+.keyword
+	ld a,(hl)
+	call validlet		;Must be at least one letter
+	jr nc,kw3
+	push hl
+.kw2	ld a,(hl)
+	call validlet		;Ensure valid letter.
+	jr nc,kw1		;Same
+	inc hl
+	ex de,hl
+	cp (hl): inc hl		;Compare to keyword
+	ex de,hl
+	jr z,kw2		;Same so far, keep going.
+.kw4	pop hl
+.kw3	ld a,-1
+	and a
+	ret			;Different!
+.kw1	ld a,(de)
+	and a			;de word must also end there
+	jr nz,kw4
+	inc sp: inc sp		;Scrap old hl
+	ret			;z decides.
+
+
+	;== SKIP BLANKS IN TEXT AT HL ==
+	;exit	a=next char after blanks
+
+.skip_bl
+	ld a,(hl): inc hl
+	cp 13			;End of line?
+	jr z,sb1
+	cp " "+1
+	jr c,skip_bl		;Ignore control codes
+	cp "("			;Comment?
+	jr z,skip_com
+	dec hl
+	ret
+.sb1	call get_line		;Get next line
+	jr skip_bl		;Skip leading blanks
+
+.skip_com			;Skip comment
+	ld a,(hl): inc hl
+	cp ")"
+	jr z,skip_bl		;Continue blank skipping
+	cp 13			;End of line?
+	call z,get_line
+	jr skip_com		;Get next line
+
+
+	;== GET NEXT LINE OF TEXT ==
+	;exit	hl points to line, af corrupt
+	;lines beginning with ">" are ignored
+	;a line beginning with "*" forces file inclusion/appendation
+
+.get_line
+	call getline
+	ld a,(hl)
+	cp ">"			;PROTEXT stored command?
+	jr z,get_line		;ignore rest of line
+	cp "*"			;File inclusion/appendation?
+	jr z,g_l_inc_app
+	cp "0"			;Digit?
+	ret c
+	cp "9"+1
+	ret nc
+	;\/\/\/
+
+	;== SKIP LINE NR AND QUOTE ==
+	push hl
+.g_l2	ld a,(hl): inc hl
+	cp 13			;end of line?
+	jr z,g_l3
+	cp "'"			;quote?
+	jr nz,g_l2
+	inc sp: inc sp		;discard old hl
+	ret			;point after quote
+.g_l3	pop hl			;not a line number and quote!
+	ret
+
+	;== INCLUDE/APPEND FILE ==
+
+.g_l_inc_app
+	inc hl			;point after "*"
+	push bc
+	push de
+	push hl			;save filename
+	call #BC7A		;close any input file
+	pop hl
+	push hl
+	;Calc length of name
+	ld b,-1
+	ld a,13			;CR
+.g_l1	inc b
+	cp (hl): inc hl		;end of line?
+	jr nz,g_l1
+
+	pop hl
+	ld de,(memtop)		;space for buffer
+	call disp_file		;inform user that were opening
+	push ix
+	call #BC77		;CAS IN OPEN
+	pop ix
+	ld hl,erm_nofile
+	jp nc,error
+	ld hl,source
+	set 0,(hl)		;force reading from file
+
+	pop de
+	pop bc
+	jp get_line		;get first line
+
+.getline
+	ld a,(source)		;BASIC or other?
+	and 2			;bit 2 decides
+	jp nz,bas_next
+
+	push bc
+	ld b,0
+	ld hl,txtbuff
+	push hl
+
+	call get_char		;get first char
+	cp 10
+	jr nz,gl1		;ignore LF
+.gl2	call get_char
+.gl1	cp 13
+	jr z,gl3		;end of line?
+	ld (hl),a: inc hl
+	and a			;end of text?
+	jp z,err_eot
+	djnz gl2		;get next, split if too long
+.gl3	ld (hl),13		;Terminate line for compiler
+	inc hl
+	ld (hl),0		;Terminate line for printing routines.
+	ld hl,(line_nr)
+	inc hl
+	ld (line_nr),hl		;Keep line count.
+	pop hl			;Point hl at text.
+	pop bc
+	ret
+
+	;==== TEXT EXTRACTION FROM BASIC REMs ====
+
+	;==== FETCH NEXT LINE FROM BASIC SOURCE ====
+
+.bas_next
+	push de
+	ld hl,(txtptr)
+	push hl
+
+	inc hl: inc hl
+	ld e,(hl): inc hl
+	ld d,(hl): inc hl
+	ld (line_nr),de		;keep BASIC line number
+	call bas_token		;check for quote
+	jp nz,err_eot
+
+	ld de,txtbuff
+.bn1	ld a,(hl): ld (de),a
+	inc de: inc hl
+	and a: jr nz,bn1
+
+	ex de,hl
+	dec hl
+	ld (hl),13		;terminate line
+	inc hl
+	ld (hl),0
+
+	pop hl
+	ld e,(hl): inc hl
+	ld d,(hl): dec hl
+	ld a,d: or e		;zero (end)
+	jp z,err_eot
+	add hl,de		;point to next line
+	ld (txtptr),hl
+	ld hl,txtbuff		;point hl at text
+	pop de			;recover de
+	ret
+
+	;== CHECK FOR QUOTE TOKEN AT HL ==
+.bas_token
+	ld a,#01
+	cp (hl)			;token for quote
+	ret nz
+	inc hl
+	ld a,#C0
+	cp (hl)			;quoted?
+	inc hl
+	ret
+
+	;== GET NEXT CHAR FROM TEXT OR FILE ==
+	;exit	a=char (zero if end of text)
+
+.get_char
+	push hl
+	ld a,(source)		;File or editor?
+	and a
+	jr nz,gcf
+
+	;Source in memory
+.gcnf	ld hl,(txtptr)
+	ld a,(hl)
+	and a
+	jr z,gc1		;end of text?
+	inc hl
+	ld (txtptr),hl
+	jr gcf2
+
+	;Source is on a file
+.gcf	push ix
+	call #BC80		;CAS IN CHAR
+	pop ix
+	jr c,gcf2
+	ld hl,source
+	res 0,(hl)		;end of file met, return to memory
+	call #BC7A		;CAS IN CLOSE
+	jr gcnf
+
+.gcf2	cp #90			;soft space?
+	jr nz,gc2
+	ld a," "
+	jr gc1
+.gc2	cp #8A			;soft LF?
+	jr nz,gc3
+	ld a,10
+	jr gc1
+.gc3	cp #91			;non-break space?
+	jr nz,gc4
+	ld a," "
+	jr gc1
+.gc4	cp "i"+#80		;italics on/off?
+	jr nz,gc1
+	ld a,"~"		;...convert to tilde.
+.gc1	pop hl
+	ret
+
+	;== DISPLAY NAME OF FILE OPENED ==
+	;entry	hl points to name
+	;	b  length of name
+	;exit	af corrupt
+
+.disp_file
+	call pcprint
+	text 13,10,"Opening file ",0
+	push bc
+	push hl
+.df1	ld a,(hl): inc hl
+	call #BB5A
+	djnz df1
+	pop hl
+	pop bc
+	call crlf
+	jp crlf
+
+	;== COMPILE LANGUAGE CODE ==
+
+.comp_code
+	call skip_bl
+	cp "{"			;Start of code with {
+	inc hl
+	jp nz,err_syntax
+.cc2	call skip_bl
+	inc hl
+	cp "}"			;End of code?
+	ret z			;End of this block of code
+	cp "#"			;Variable assignment?
+	jr z,cc3
+	dec hl
+.cc1	ld de,commands
+	call keylist		;Find and execute keyword in list
+	jr cc2			;Do next command
+
+	;Variable assignment
+.cc3	call comp_exp		;var number expression
+	ld a,#CD
+	ld de,r_vars
+	call comp_a
+	call comp_de		;call to runtime
+	ld de,#E5DD
+	call comp_de		;PUSH IX to save var address
+	call skip_bl
+	cp "=": inc hl
+	jp nz,err_syntax
+	call comp_exp		;expressiong for assigning
+	ld de,#E1DD		;POP IX
+	call comp_de
+	ld a,#DD
+	ld de,#0075		;LD (IX+0),L
+	call comp_a
+	call comp_de
+	ld de,#0174
+	call comp_a
+	call comp_de		;LD (IX+1),H
+	jr cc2			;do next command
+
+
+	;== COMPILE LANGUAGE EXPRESSION ==
+
+.comp_exp
+	call skip_bl
+	cp "0"			;Is it a literal number?
+	jr c,ce1
+	cp "9"+1
+	jr nc,ce1
+	call convert		;convert number
+	ld a,#21
+	call comp_a
+	jp comp_de		;compile LD HL,number
+.ce1	cp "#"			;is it a variable?
+	jr nz,ce4
+	inc hl
+	call comp_exp		;exression points to variable number
+	ld a,#CD
+	ld de,r_vars
+	call comp_a
+	call comp_de		;variable runtime to find address
+	ld a,#DD
+	ld de,#006E
+	call comp_a
+	call comp_de		;LD L,(IX+0)
+	ld de,#0166
+	call comp_a
+	jp comp_de		;LD H,(IX+1)
+.ce4	ld c,#80		;is it an object?
+	push hl
+	call find_wd
+	pop hl
+	jr nc,ce2
+	ld e,a: ld d,0
+	ld a,#21
+	call comp_a
+	call comp_de		;compile LD HL,object
+	jp skip_let		;skip the word
+.ce2	ld de,expres
+	call keylist		;Find and execute expression keyword
+	ret
+
+	;== DESCRIBING ==
+
+.e_desc	ld a,#2A
+	ld de,desc_flg
+	call comp_a
+	jp comp_de
+
+	;== KEY ==
+
+.e_key	ld de,r_key
+	jp comp_call		;call runtime
+
+	;== YESNO ==
+
+.e_yesno
+	ld de,r_yesno
+	jp comp_call		;call runtime
+
+	;== ADD <n1>+<n2> ==
+
+.e_add	call comp_exp
+	ld a,#E5		;PUSH HL
+	call comp_a
+	call skip_bl
+	cp "+": inc hl
+	jp nz,err_syntax
+	call comp_exp
+	ld de,#19D1		;POP DE | ADD HL,DE
+	jp comp_de
+
+	;== SUB <n1>-<n2> ==
+
+.e_sub	call comp_exp
+	ld a,#E5		;PUSH HL
+	call comp_a
+	call skip_bl
+	cp "-": inc hl
+	jp nz,err_syntax
+	call comp_exp
+	ld de,#EBD1		;POP DE | EX DE,HL
+	ld a,#A7		;AND A
+	call comp_de
+	call comp_a
+	ld de,#52ED		;SBC HL,DE
+	jp comp_de
+
+	;== AT <loc> ==
+
+.e_at	call get_sloc		;get loc
+	ld de,#5BED
+	call comp_de
+	ld de,loc
+	call comp_de		;LD DE,(loc)
+	ld de,r_equal
+	jp comp_call		;compile call to runtime
+
+	;== EQUAL <n1>=<n2> ==
+
+.e_equal
+	call comp_exp		;get first number
+	ld a,#E5		;compile PUSH HL
+	call comp_a
+	call skip_bl
+	cp "=": inc hl
+	jp nz,err_syntax
+	call comp_exp		;get second number
+	ld a,#D1
+	call comp_a		;POP DE
+	ld de,r_equal
+	jp comp_call		;compile call to runtime
+
+	;== NOT <n> ==
+
+.e_not	call comp_exp
+	ld de,r_not
+	jp comp_call		;call to runtime
+
+	;== FIND <obj> AT <loc> ==
+
+.e_find	call comp_exp		;object number
+	ld a,#7D		;LD A,L
+	call comp_a
+	call skip_bl
+	ld de,k_at
+	call checkword
+	ld a,#11
+	ld de,0
+	call comp_a
+	call comp_de		;LD DE,0
+.f_e1	call get_sloc		;LD HL,<loc>
+	ld de,r_find_obj
+	call comp_call		;call to runtime
+	call skip_bl
+	cp "/": inc hl		;alternative place?
+	jr z,f_e1
+	dec hl
+	ld a,#EB
+	jp comp_a		;EX DE,HL (hl=flag)
+
+	;== EITHER <n1> OR <n2> ==
+
+.e_either
+	call comp_exp		;expression
+	ld a,#E5		;PUSH HL
+	call comp_a
+	call skip_bl
+	ld de,k_or
+	call checkword		;OR
+	call comp_exp		;expression
+	ld a,#D1		;POP DE
+	call comp_a
+	ld de,r_either
+	jp comp_call		;call runtime
+
+	;== BOTH <n1> AND <n2> ==
+
+.e_both	call comp_exp		;expression
+	ld a,#E5		;PUSH HL
+	call comp_a
+	call skip_bl
+	ld de,k_and
+	call checkword		;AND
+	call comp_exp		;expression
+	ld a,#D1		;POP DE
+	call comp_a
+	ld de,r_both
+	jp comp_call		;call runtime
+
+	;== TYPED <word> ==
+	;== TYPED [word1 word2/word3]
+	; (becomes CALL r_mtyped,w1,w2,0,w3,0,0)
+
+.e_typed
+	call skip_bl
+	cp "["			;multiple words?
+	jr z,e_mtyped
+	call word_num		;Get word number
+	ld d,a: ld e,#3E
+	call comp_de		;LD A,word number
+	call skip_let		;skip word
+	ld de,r_typed
+	jp comp_call		;call runtime
+
+.e_mtyped
+	ld de,r_mtyped
+	call comp_call		;CALL r_mtyped
+	inc hl
+	ld b,0			;word count
+.e_mt1	call skip_bl		;move to next word
+	cp "/"			;alternate?
+	jr z,e_mt2
+	cp "]"			;end of list?
+	jr z,e_mt3
+	push bc
+	call word_num		;get word number
+	pop bc
+	call comp_a		;compile it
+	call skip_let		;skip it
+	inc b			;count it
+	jr e_mt1
+
+.e_mt2	ld a,b: and a		;any words since last time?
+	jp z,err_syntax
+	xor a
+	call comp_a		;single zero
+	ld b,a
+	inc hl			;skip /
+	jr e_mt1
+
+.e_mt3	ld a,b: and a		;any words since last time?
+	jp z,err_syntax
+	inc hl			;skip ]
+	ld de,0
+	jp comp_de		;double zero
+
+	;== ITEM <n> ==
+
+.e_item	call comp_exp
+	ld de,r_item
+	jp comp_call		;call runtime
+
+	;== COUNT <loc> ==
+
+.e_count
+	call get_sloc		;get location
+	ld de,r_count
+	jp comp_call		;call runtime
+
+	;== ATTRIB <obj> ==
+
+.e_attrib
+	call comp_exp		;get object
+	ld de,attrib
+	call comp_call		;CALL get attrib address
+	ld de,#235E
+	call comp_de		;LD E,(HL) | INC HL
+	ld de,#EB56
+	jp comp_de		;LD D,(HL) | EX DE,HL
+
+	;== STATUS <obj> IS <letters> ==
+
+.e_status
+	call comp_exp		;get object number
+	call skip_bl
+	ld de,k_is
+	call checkword
+	call skip_bl
+	call statusmask		;create mask for letters
+	ld e,#3E
+	ld d,c
+	call comp_de		;LD A,mask
+	ld de,r_status
+	jp comp_call		;call runtime
+
+	;== RANDOM <n> ==
+
+.e_random
+	call comp_exp		;up to how much?
+	ld de,r_random
+	jp comp_call		;call runtime
+
+	;== GREATER <n1> THAN <n2> ==
+
+.e_greater
+	call comp_exp
+	ld a,#E5		;push hl
+	call comp_a
+	call skip_bl
+	ld de,k_than
+	call checkword
+	call comp_exp
+	ld a,#D1		;pop de	
+	call comp_a
+	ld de,r_greater		;call runtime
+	jp comp_call
+
+	;== FIRSTAT <loc> ==
+
+.e_firstat
+	call get_sloc
+	ld de,r_firstat
+	jp comp_call		;call runtime
+
+	;== BEEN <loc> ==
+
+.e_been	call get_sloc		;location
+	ld de,r_been
+	jp comp_call		;call runtime
+
+	;== AREA <loc> ==
+
+.e_area	call get_sloc		;location of area
+	ld de,r_area
+	jp comp_call		;call runtime
+
+
+	;== WHILE <n> ==
+
+.c_while
+	push ix
+	call comp_exp		;logical expression
+	ld de,#B57C
+	call comp_de		;LD A,H | OR L
+	ld a,#CA
+	call comp_a
+	push ix
+	call comp_de		;JP NZ,??exit??
+	call comp_code		;compile block of loop code
+	pop bc
+	pop de
+	push bc			;get loop start
+	ld a,#C3
+	call comp_a
+	call comp_de		;JP loop start
+	pop de
+	push ix: pop bc
+	ex de,hl
+	ld (hl),c: inc hl
+	ld (hl),b		;Fill in ??exit??
+	ex de,hl
+	ret
+
+	;== IF <n> ... ELSE ... ==
+
+.c_if	call comp_exp		;logical expression
+	ld de,#B57C
+	call comp_de		;LD A,H | OR L
+	ld a,#CA
+	call comp_a
+	push ix
+	call comp_de		;JP NZ,??endif??
+	call comp_code		;compile block of "true" code
+	call skip_bl
+	ld de,k_else		;is there an ELSE?
+	call keyword
+	jp nz,rif1
+	ld a,#C3
+	call comp_a
+	pop de: push ix		;recover address of ??endif??...
+	call comp_de		;JP ??endif??
+	push ix: pop bc
+	ex de,hl
+	ld (hl),c: inc hl
+	ld (hl),b
+	ex de,hl		;...and jump it here.
+	call comp_code		;compile block of "false" code
+.rif1	pop de
+	push ix: pop bc
+	ex de,hl
+	ld (hl),c: inc hl
+	ld (hl),b
+	ex de,hl		;point ??endif?? here.
+	ret
+
+
+	;== DESCRIBE ==
+
+.c_desc	ld de,#013E
+	call comp_de		;compile LD A,1
+	ld a,#32
+	ld de,desc_flg
+	call comp_a
+	jp comp_de		;compile LD (desc_flg),A
+
+	;== DRAW ==
+
+.c_draw	ld de,#FF3E
+	call comp_de		;compile LD A,-1
+	ld a,#32
+	ld de,pict_flg
+	call comp_a
+	jp comp_de		;compile LD (pict_flg),A
+
+	;== PRINT <str> ==
+
+.c_print
+	call skip_bl
+	cp "$"			;message print?
+	jr z,c_p1
+	ld de,pcprintc
+	call comp_call		;compile CALL pcprintc
+	jp comp_str		;compile string after it
+.c_p1	inc hl
+	call comp_exp		;get message number
+	ld de,find_mess
+	call comp_call		;CALL find_mess
+	ld de,hlprintc
+	jp comp_call		;CALL hlprintc
+
+	;== DONE ==
+
+.c_done	ld a,(localbefore)
+	and a
+	jp nz,err_unex		;not allowed RETs in LOCAL BEFORE routines
+	ld a,#C9
+	jp comp_a		;compile RET
+
+
+	;== MOVE <obj> FROM <loc1> TO <loc2> ==
+
+.c_move	call comp_exp		;Get object number
+	ld a,#7D
+	call comp_a		;compile LD A,L
+	call skip_bl
+	ld de,k_from
+	call checkword
+	call get_sloc		;compile get loc code (inc special locs)
+	ld a,#EB		;compile EX DE,HL
+	call comp_a
+	call skip_bl
+	ld de,k_to
+	call checkword
+	call get_sloc		;compile get loc code
+	ld a,#EB		;compile EX DE,HL
+	call comp_a
+	ld de,locmove_obj
+	jp comp_call		;compile CALL locmove_obj
+
+	;== LIST <loc> ==
+
+.c_list	call get_sloc
+	ld de,disp_list
+	jp comp_call
+
+	;== MOVETO <loc> ==
+
+.c_moveto
+	call skip_bl
+	call get_loc		;get simple location
+	ld a,#21
+	call comp_a
+	call comp_de		;compile LD HL,loc code
+	ld a,#22
+	ld de,loc
+	call comp_a
+	jp comp_de		;compile LD (loc),HL
+
+	;== DISPLAY <n> ==
+
+.c_display
+	call comp_exp
+	ld de,disp_hl
+	jp comp_call
+
+	;== EXAMINE <obj> ==
+
+.c_examine
+	call comp_exp		;get object
+	ld de,r_exam
+	jp comp_call		;call runtime
+
+	;== QUIT ==
+
+.c_quit	ld a,#C3
+	ld de,abort		;JP abort
+	call comp_a
+	jp comp_de
+
+	;== ATTRIB <obj>=<n> ==
+
+.c_attrib
+	call comp_exp		;get object
+	ld de,attrib
+	call comp_call		;CALL get attrib address
+	ld a,#E5
+	call comp_a		;PUSH HL
+	call skip_bl
+	cp "=": inc hl		;assignment =
+	jp nz,err_syntax
+	call comp_exp		;get assigned value
+	ld de,#E1DD
+	call comp_de		;POP IX
+	ld a,#DD
+	ld de,#0075
+	call comp_a
+	call comp_de		;LD (IX+0),L
+	ld de,#0174
+	call comp_a
+	jp comp_de		;LD (IX+1),H
+
+	;== CR ==
+
+.c_crlf	ld de,crlf
+	jp comp_call
+
+	;== SP ==
+
+.c_sp	ld de,r_sp
+	jp comp_call
+
+	;== MAKE/UNMAKE <obj> <stats> ==
+
+.c_unmake
+	ld de,r_unmake
+	jr c_m1
+
+.c_make	ld de,r_make
+.c_m1	push de
+	call comp_exp		;get object number
+	call skip_bl
+	call statusmask		;create mask for letters
+	ld e,#3E
+	ld d,c
+	call comp_de		;LD A,mask
+	pop de			;call to runtime
+	jp comp_call
+
+	;== LOOP ==
+
+.c_loop	ld de,#7BED
+	call comp_de
+	ld de,toplevel
+	call comp_de		;LD SP,(toplevel)
+	ld a,#C3
+	call comp_a
+	ld de,adloop
+	jp comp_de		;JP adloop
+
+	;== LINK <direc> FROM <loc> TO <loc> ==
+
+.c_link	call skip_bl
+	ld c,#00		;look for words
+	push hl
+	call find_word		;Get direction word
+	pop hl
+	cp 5			;is it a direction word?
+	jp nc,err_nodirec
+	ld e,#3e
+	ld d,a
+	call comp_de		;LD A,direction
+	call skip_let		;skip the word
+	call skip_bl
+	ld de,k_from
+	call checkword
+	ld a,#21
+	call comp_a		;LD HL,loc code
+	call skip_bl
+	call get_loc		;Get ordinary loc
+	call comp_de
+	ld a,#E5
+	call comp_a		;PUSH HL
+	call skip_bl
+	ld de,k_to
+	call checkword
+	call skip_bl
+	cp "-"			;link to nothing?
+	jr nz,c_l1
+	inc hl
+	ld a,#21
+	ld de,0
+	call comp_a
+	call comp_de		;LD HL,0
+	jr c_l2
+.c_l1	ld a,#21		;LD A,loc
+	call comp_a
+	call get_loc		;Compile second location
+	call comp_de
+.c_l2	ld a,#D1		;POP DE
+	call comp_a
+	ld de,r_link
+	jp comp_call		;call runtime
+
+	;== SWAP <noun1> AND <noun2> ==
+
+.c_swap	call comp_exp		;get noun 1
+	ld a,#E5		;PUSH HL
+	call comp_a
+	call skip_bl
+	ld de,k_and
+	call checkword
+	call comp_exp		;get noun 2
+	ld a,#D1		;POP DE
+	call comp_a
+	ld de,r_swap
+	jp comp_call		;call runtime
+
+	;== SAVE ==
+
+.c_save	ld de,r_save
+	jp comp_call
+
+	;== LOAD ==
+
+.c_load	ld de,r_load
+	jp comp_call
+
+	;== SORT <n> ==
+
+.c_sort	call comp_exp
+	ld de,r_sort
+	jp comp_call
+
+	;== PICTURE <filename>/DESCRIBING/KEY ==
+
+.c_picture
+	call skip_bl
+	ld de,k_desc
+	call keyword		;DESCRIBING?
+	jr nz,c_pic1
+	ld de,#003E
+	call comp_de
+	ld a,#32
+	ld de,pic_wait		;clear pic_wait flag
+	call comp_a
+	jp comp_de
+
+.c_pic1	ld de,k_key
+	call keyword		;KEY?
+	jr nz,c_pic2
+	ld de,#FF3E
+	call comp_de
+	ld a,#32
+	ld de,pic_wait		;set pic_wait flag
+	call comp_a
+	jp comp_de
+
+.c_pic2	ld de,r_picture
+	call comp_call		;call runtime with inline filename
+	jp comp_str		;compile filename string
+
+	;== PRINTF <filename> ==
+
+.c_printf
+	call skip_bl
+	ld de,r_printf
+	call comp_call		;call runtime with inline filename
+	jp comp_str		;compile name in inline string
+
+	;== EXITS <N str> <S str> <E str> <W str> <none str>  ==
+
+.c_exits
+	ld de,r_exits
+	call comp_call		;runtime
+	call comp_str		;strings
+	call comp_str
+	call comp_str
+	call comp_str
+	jp comp_str
+
+	;== QUICKSAVE/QUICKLOAD ==
+
+.c_quicksave
+	ld de,r_quicksave
+	jp comp_call
+
+.c_quickload
+	ld de,r_quickload
+	jp comp_call
+
+	;== RESTART ==
+
+.c_restart
+	ld de,r_restart
+	jp comp_call
+
+	;== INK ==
+
+.c_ink	call comp_exp		;compile ink number
+	ld a,#7D
+	call comp_a		;LD A,L
+	call comp_colour
+	ld de,#BC32		;SCR SET INK
+	jp comp_call
+
+	;== BORDER ==
+
+.c_border
+	call comp_colour
+	ld de,#BC38		;SCR SET BORDER
+	jp comp_call
+
+	;== WINDOW ==
+
+.c_window
+	ld b,5			;5 params
+.c_w1	push bc
+	call comp_exp		;param
+	ld a,#E5		;PUSH HL
+	call comp_a
+	pop bc
+	djnz c_w1
+	ld de,r_window
+	jp comp_call		;call runtime
+
+	;== FORMAT / FORMAT NOT ==
+
+.c_format
+	ld a,#21
+	ld de,localbefore
+	call comp_a
+	call comp_de		;LD HL,localbefore
+	call skip_bl
+	ld de,k_not
+	call keyword		;format not?
+	ld de,#0036
+	jp z,comp_de		;LD (HL),0
+	ld de,#FF36
+	jp comp_de		;LD (HL),-1
+
+	;== PEN ==
+
+.c_pen	call comp_exp
+	ld a,#7D
+	call comp_a		;LD A,L
+	ld de,#BB90
+	jp comp_call
+
+	;== PAPER ==
+
+.c_paper
+	call comp_exp
+	ld a,#7D
+	call comp_a		;LD A,L
+	ld de,#BB96
+	jp comp_call
+
+	;== STREAM ==
+
+.c_stream
+	call comp_exp
+	ld a,#7D
+	call comp_a		;LD A,L
+	ld de,#BBB4
+	jp comp_call
+
+	;== LOCATE ==
+
+.c_locate
+	call comp_exp
+	ld a,#E5		;PUSH HL
+	call comp_a
+	call comp_exp
+	ld de,#63D1
+	call comp_de
+	ld de,#BB75
+	jp comp_call
+
+	;== CLEAR ==
+
+.c_clear
+	ld de,#BB6C		;TXT CLEAR WINDOW
+	jp comp_call
+
+	;== CALL <address> ==
+
+.c_call	call comp_exp		;get address
+	ld de,#2ADD		;LD IX,(varbase)
+	call comp_de
+	ld de,varbase
+	call comp_de
+	ld de,#5BED
+	call comp_de
+	ld de,memtop
+	call comp_de		;LD DE,(memtop)
+	ld de,#001E		;PCHL intruction
+	jp comp_call
+
+	;== CALLMC <mc offset address> ==
+
+.c_callmc
+	call comp_exp
+	ld de,#5BED
+	call comp_de
+	ld de,mc_base
+	call comp_de		;LD DE,(mc_base)
+	ld a,#19		;ADD HL,DE
+	call comp_a
+	ld de,#5BED
+	call comp_de
+	ld de,memtop
+	call comp_de		;LD DE,(memtop)
+	ld de,#2ADD		;LD IX,(varbase)
+	call comp_de
+	ld de,varbase
+	call comp_de
+	ld de,#001E		;LOW PCHL INSTRUCTION
+	jp comp_call		;compile call to it
+
+	;== LOADMC <filename> ==
+
+.c_loadmc
+	call skip_bl
+	ld de,r_loadmc
+	call comp_call		;call runtime with inline filename
+	jp comp_str		;compile name in inline string

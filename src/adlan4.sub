@@ -1,0 +1,844 @@
+	;================================
+	;=== ADLAN ADVENTURE LANGUAGE ===
+	;===        SUB-FILE 4        ===
+	;===   Last edited 14SEP88    ===
+	;================================
+
+	; Copyright (C) 1987, 1999 Richard Brooksby.  All rights
+	; reserved.  You may make and distribute verbatim copies of
+	; this document provided that you retain as they appear all
+	; copyright and licence notices.  You may NOT charge a fee for
+	; this document or for distributing this document.  You may
+	; NOT make or distribute derivative works (modified versions)
+	; of this document without the express written permission of
+	; the copyright holder.
+	;
+	; This copyright notice was added on 1999-09-18.
+
+	;=== PICTURE COMPRESSION III ===
+
+	;Compresses pictures by
+	;	1. comparing lines to previous lines
+	;	2. storing only differences to the most similar line
+
+	;First byte of each line
+	;	0...199	Copy line, followed by differences, followed by -1
+	;	-1	Literal line
+
+.compress
+	call copy_down		;copy runtimes to RAM
+	ld (toplevel),sp
+
+	ld hl,erm_params
+	cp 2			;2 parameters?
+	jp nz,rt_error
+
+	ld (txtptr),sp
+
+	ld e,(ix): inc ix
+	ld d,(ix): inc ix	;address of 2k buffer
+
+	push de
+	call getstring
+	pop de
+	call #BC8C		;CAS OUT OPEN
+	jp nc,save_err
+
+	push hl:pop ix		;address of header
+	ld (ix+18),4		;screen image type
+
+	;Store screen mode
+	call #BC11		;SCR GET MODE
+	call #BC95		;CAS OUT CHAR
+	jp nc,save_err
+
+	;Store flashing speed
+	call #BC41		;SCR GET FLASHING
+	ld a,l
+	call #BC95
+	jp nc,save_err
+	ld a,h
+	call #BC95		;write to file
+	jp nc,save_err
+
+	;Store inks
+	ld a,15
+.store_inks
+	push af
+	call #BC35		;SCR GET INK
+	ld a,b
+	call #BC95
+	jp nc,save_err
+	ld a,c
+	call #BC95		;write to file
+	jp nc,save_err
+	pop af
+	dec a
+	jp p,store_inks
+
+	;Store border
+	call #BC3B		;SCR GET BORDER
+	ld a,b
+	call #BC95
+	jp nc,save_err
+	ld a,c
+	call #BC95		;write to file
+	jp nc,save_err
+
+	;Compress screen
+
+.c_screen
+	ld b,0
+	call c_li1		;literal first line
+	ld bc,199*256+1		;remaining lines, line nr
+.c_sc1	push bc
+	ld a,c
+	call c_line
+	pop bc
+	inc c
+	djnz c_sc1
+	jp #BC8F		;CAS OUT CLOSE, done
+
+	
+	;COMPARE LINES, COUNTING DIFFERENCES
+	;entry	a=first line
+	;	c=second line
+	;exit	a=nr. differences
+	;	f,bc,de,hl corrupt
+
+.c_lcompare
+	push bc
+	call c_lineaddr
+	pop bc
+	push hl
+	ld a,c
+	call c_lineaddr
+	pop de			;de=line1, hl=line2
+	ld b,80
+	ld c,0
+.c_lc1	push de
+	rst 4: inc hl
+	ld d,a
+	ex (sp),hl
+	rst 4: inc hl
+	ex (sp),hl
+	cp d			;compare bytes
+	pop de
+	jr z,c_lc2
+	inc c			;count difference
+.c_lc2	djnz c_lc1
+	ld a,c
+	ret
+
+	;Compare lines, outputting differences
+	;entry	a=first line (differences output)
+	;	c=second line
+	;exit	af,bc,de,hl corrupt
+
+.c_lcp_out
+	push bc
+	call c_lineaddr
+	pop bc
+	push hl
+	ld a,c
+	call c_lineaddr
+	pop de			;de=line1, hl=line2
+	ld b,80
+.c_lcp1	push de
+	rst 4: inc hl
+	ld d,a
+	ex (sp),hl
+	rst 4: inc hl
+	ex (sp),hl
+	cp d			;compare bytes
+	pop de
+	jr z,c_lcp2
+	push af
+	ld a,b
+	call #BC95		;CAS OUT CHAR
+	jp nc,save_err
+	pop af
+	call #BC95
+	jp nc,save_err		;output difference
+.c_lcp2	djnz c_lcp1
+	ld a,-1
+	call #BC95		;end line marker
+	jp nc,save_err
+	ret
+
+	
+	;Find line most similar to line
+	;entry	a=this line
+	;exit	h=closest line
+	;	l=nr differences
+	;	bc,de corrupt
+
+.c_findsim
+	ld b,a			;n previous lines to check
+	ld c,0			;start at 0
+	ld hl,#ffff		;start with line -1 with 255 differences
+.c_fs1	push af
+	push bc
+	push hl
+	call c_lcompare		;compare lines
+	pop hl
+	pop bc
+	and a			;no differences?
+	jr z,c_fs3
+	cp l			;less than least so far?
+	jr nc,c_fs2
+	ld l,a
+	ld h,c			;make that the new line
+.c_fs2	pop af
+	inc c
+	djnz c_fs1
+	ret
+.c_fs3	ld l,a			;identical line found
+	pop af
+	ld h,c
+	ret
+
+	;Compress one line
+	;entry	a=line
+
+.c_line	call c_findsim		;find similar line
+	ld b,a
+	ld a,l
+	cp 40			;>=40 differences?
+	jr nc,c_li1
+	ld a,h
+	call #BC95		;write line number
+	jp nc,save_err
+	ld a,b
+	ld c,h
+	call c_lcp_out		;output the differences
+	ret
+	;output line literally
+.c_li1	ld a,-1			;literal marker
+	call #BC95
+	jp nc,save_err
+	ld a,b			;get line number
+	call c_lineaddr
+	ld b,80
+.c_li2	rst 4: inc hl
+	call #BC95		;output byte from line
+	jp nc,save_err
+	djnz c_li2
+	ret
+
+	
+.getstring
+	ld l,(ix+0)
+	ld h,(ix+1)
+	ld b,(hl): inc hl
+	ld e,(hl): inc hl
+	ld d,(hl)
+	ex de,hl
+	ret
+
+
+	;=== RUN A BINARY FILE ===
+	;|RUN,<filename>
+
+.run	call copy_down
+	ld (toplevel),sp
+	ld hl,erm_params
+	cp 1
+	jp nz,rt_error		;one parameter
+	call #BC7D		;CAS IN ABANDON
+	call getstring		;get filename
+	call #BC77		;open file
+	jr c,run2
+	call #BC7D		;CAS IN ABANDON
+	ld hl,erm_cantopen
+	jp rt_error
+.run2	and %00001110
+	cp 2			;binary file?
+	jr z,run1
+	call #BC7D
+	ld hl,erm_badfile
+	jp rt_error
+.run1	push de
+	pop hl
+	call #BC83		;CAS IN DIRECT
+	jr c,run3
+	call #BC7D
+	ld hl,erm_norun
+	jp rt_error
+.run3	ld (ru_address),hl	;store entry address
+	ld bc,ru_len
+	ld de,ru_entry
+	ld hl,ru_code
+	push de
+	ldir			;copy routine to memory
+	ld c,#FF
+	pop hl
+	jp #BD16		;KL START PROGRAM
+
+.ru_code
+	org #AC00,@
+.ru_entry
+	push af
+	push hl
+	xor a
+	ld hl,#070E		;LD E,7 instruction
+	ld (#BCCB),a
+	ld (#BCCB+1),hl		;intercept jumpblock
+	pop hl
+	pop af
+	byte #C3		;JP instruction
+
+.ru_len	equ $-ru_entry
+
+.ru_address			;variable for logical location
+
+	org @	
+	
+
+	;=== SWITCH OFF BACKGROUND ROMS ===
+	;|ROMOFF,<list of <rom nr>,>
+	;a ROM number 0 will switch off the ADLAN ROM.
+
+.romoff	ld bc,ro_len
+	ld de,ro_entry
+	ld hl,ro_code
+	ldir
+	ld c,0			;select BASIC
+.ro1	and a
+	ld hl,ro_entry
+	jp z,#BD16		;MC START PROGRAM
+	ld e,(ix)
+	ld b,e
+	inc b
+	dec b			;0?
+	jr nz,ro2
+	push af
+	call #b912
+	ld e,a
+	pop af
+.ro2	ld d,0
+	ld hl,ro_table
+	add hl,de
+	inc (hl)		;zero table entry at hl+n
+	inc ix: inc ix		;move to next parameter
+	dec a
+	jr ro1
+
+.ro_code
+	org #AC00,@
+.ro_entry
+	ld ix,ro_end
+	ld c,15
+.ro_loop
+	dec ix
+	xor a: or (ix)
+	call nz,#BCCE		;KL INIT BACK
+	dec c
+	jr nz,ro_loop
+	jp #C00C
+
+.ro_table
+	rmem 16,-1
+.ro_end
+
+.ro_len	equ $-ro_entry
+
+	org @
+
+	
+	;== DISPLAY COMMAND/EXPRESSION SUMMARY ==
+
+.help	call r_pcprint
+
+	text 4,2
+	text "                               COMMANDS",13,10
+	text 10
+	text 10
+	text "DESCRIBE",13,10
+	text "DRAW",13,10
+	text "MOVE <object> FROM <location 1> TO <location 2>",13,10
+	text "PRINT <string>",13,10
+	text "PRINT $<exp for message number>",13,10
+	text "PRINTF <filename string>",13,10
+	text "PICTURE <filename string>",13,10
+	text "PICTURE DESCRIBING",13,10
+	text "PICTURE KEY",13,10
+	text "DONE",13,10
+	text "LIST <location>",13,10
+	text "MOVETO <location>",13,10
+	text "IF <test exp> { <true block> }",13,10
+	text "IF <test exp> { <true block> } ELSE { <false block> }",13,10
+	text "WHILE <test exp> { <block repeated if true> }",13,10
+	text "DISPLAY <exp>",13,10
+	text "EXAMINE <object>",13,10
+	text 10
+	text "Press a key or ESCape...",0
+
+	call #BB06
+	cp #FC: ret z
+	call r_pcprint
+
+	text 4,2
+	text "QUIT",13,10
+	text "RESTART",13,10
+	text "CR",13,10
+	text "SP",13,10
+	text "#<exp for var number> = <exp>",13,10
+	text "ATTRIB <object> = <exp>",13,10
+	text "MAKE <object> <status letters>",13,10
+	text "UNMAKE <object> <status letters>",13,10
+	text "KEY",13,10
+	text "LOOP",13,10
+	text "LINK <direction> FROM <location 1> TO <location 2>",13,10
+	text "SWAP <object 1> AND <object 2>",13,10
+	text "SAVE",13,10
+	text "LOAD",13,10
+	text "QUICKSAVE",13,10
+	text "QUICKLOAD",13,10
+	text "EXITS <north str> <south str> <east str> <west str> <none str>",13,10
+	text 10
+	text "Press a key or ESCape...",0
+
+	call #BB06
+	cp #FC: ret z
+	call r_pcprint
+
+	text 4,2
+	text "INK <ink number> <colour>",13,10
+	text "INK <ink number> <colour> <second colour>",13,10
+	text "PEN <ink number>",13,10
+	text "PAPER <ink number>",13,10
+	text "BORDER <ink number> <colour>",13,10
+	text "BORDER <ink number> <colour> <second colour>",13,10
+	text "WINDOW <stream> <left limit> <right limit> <top limit> <bottom limit>",13,10
+	text "STREAM <stream>",13,10
+	text "CLEAR",13,10
+	text "LOCATE <column> <row>",13,10
+	text "FORMAT",13,10
+	text "FORMAT NOT",13,10
+	text "CALL <address>",13,10
+	text "CALLMC <offset_address>",13,10
+	text "LOADMC <filename>",13,10
+
+	text 10
+	text "Press a key or ESCape...",0
+
+	call #BB06
+	cp #FC: ret z
+	call r_pcprint
+
+	text 4,2
+	text "                             EXPRESSIONS",13,10
+	text 10
+	text 10
+	text "EQUAL <exp 1> = <exp 2>",13,10
+	text "AT <location>",13,10
+	text "AREA <location>",13,10
+	text "NOT <exp>",13,10
+	text "FIND <object> AT <location>",13,10
+	text "FIND <object> AT <loc1> / <loc2>...",13,10
+	text "EITHER <exp 1> OR <exp 2>",13,10
+	text "BOTH <exp 1> AND <exp 2>",13,10
+	text "TYPED <word>",13,10
+	text "TYPED [ <word group 1> / <word group 2> / <...etc> ]",13,10
+	text "ADD <exp 1> + <exp 2>",13,10
+	text "SUB <exp 1> - <exp 2>",13,10
+	text "ITEM <exp for item number>",13,10
+	text "FIRSTAT <location code>",13,10
+	text "COUNT <location>",13,10
+	text "KEY",13,10
+	text "YESNO",13,10
+	text "DESCRIBING",13,10
+	text 10
+	text "Press a key or ESCape...",0
+
+	call #BB06
+	cp #FC: ret z
+	call r_pcprint
+
+	text 4,2
+	text "#<exp for var number>",13,10
+	text "ATTRIB <object>",13,10
+	text "STATUS <object> IS <status letters>",13,10
+	text "RANDOM <exp>",13,10
+	text "GREATER <exp 1> THAN <exp 2>",13,10
+	text "BEEN <location>",13,10
+	text 10
+	text "Press a key or ESCape...",0
+
+	call #BB06
+	cp #FC: ret z
+	call r_pcprint
+
+	text 4,2
+	text "                          EXTERNAL COMMANDS",13,10
+	text 10
+	text 10
+	text "ADLAN                  (to compile from PROTEXT or MAXAM)",13,10
+	text "ADLAN,<filename>       (to compile from an ASCII or PROTEXT file)",13,10
+	text "ADL                    (to compile from BASIC quote-lines)",13,10
+	text "COMPRESS,<filename>,<2K buffer>",13,10
+	text "                       (to compress a screen for an adventure)",13,10
+	text "ROMOFF,<rom>,<rom>...  (to switch off any ROMs. 0 switches off ADLAN)",13,10
+	text "RUN,<filename>         (RUN a file, disabling expansion ROMs)",13,10
+	text "ADLAN.HELP",13,10
+	text "ADLAN.INFO",13,10
+	text "UNICAL",13,10
+	text "BLOCKED",13,10
+	text "STYLITE",13,10
+	text 10,0
+
+	ret
+
+	;== DISPLAY ADLAN INFO ==
+
+.info	call r_pcprint
+
+	text 4,2
+	text "             THE ADLAN COMPILER FOR AMSTRAD CPC COMPUTERS",13,10
+	text 10
+	text "The ADLAN compiler was designed, not as an adventure creating package,",13,10
+	text "but as an adventure language.  It  is  intended  to be as flexible and",13,10
+	text "open-ended as possible,  and not to restrict  the user to a fixed type",13,10
+	text "or format  of  adventure.  ADLAN  was  written  in  response  to other",13,10
+	text "packages which did exactly that.  As  a result, the presentation of an",13,10
+	text "adventure written using ADLAN requires  a little more thought from the",13,10
+	text "user.  However, with proper use of windows, control  codes,  character",13,10
+	text "sets and graphics I believe the result will be of higher quality.",13,10
+	text 10
+	text "Any future versions of ADLAN-I  will be  upwardly compatable with this",13,10
+	text "version.",13,10
+	text 10
+	text "There is no commission to pay if you want to market adventures written",13,10
+	text "with ADLAN, after all, that  is  what  a  compiler  is for! However, a",13,10
+	text "mention of ADLAN on your title screen would be appreciated.",13,10
+	text 10
+	text "I hope you enjoy using ADLAN, and good luck.",13,10
+	text 10
+	text "                                Richard Brooksby",13,10
+	text "                                (Richard.Brooksby@pobox.com)",13,10,10,0
+
+	ret
+
+	;== DISPLAY COPYING INFO ==
+
+.copying
+	call r_pcprint
+
+	text 4,2
+
+        text "      THE ADLAN COMPILER COPYRIGHT NOTICE AND COPYING LICENSE",13,10
+        text 10
+	text "The ADLAN ROM version 4.15 is copyright (C) 1987, 1999 Richard Brooksby.",13,10
+	text "You may make and distribute verbatim copies of this ROM in any medium",13,10
+	text "provided that you retain as they appear all copyright and licence",13,10
+	text "notices.  You may NOT charge a fee for this ROM or for distributing this",13,10
+	text "ROM.  You may NOT make or distribute derivative works (modified",13,10
+	text "versions) of this ROM without the express written permission of the",13,10
+	text "copyright holder.",13,10
+	text 10
+	text "The ADLAN ROM is distributed in the hope that it will be useful,",13,10
+	text "but WITHOUT ANY WARRANTY; without even the implied warranty of",13,10
+	text "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",13,10
+	text 10,0
+
+	ret
+	
+	;=== SET UP UNICAL HAND CHARACTER SET ===
+
+.boot_unical
+	ld de,unical1
+	ld hl,#4000
+	call #BBAB		;TXT SET M TABLE
+	ld bc,unicallen
+	ld de,#4000
+	ld hl,unical
+	ldir			;copy into RAM
+	ret
+
+	;== Install UNICAL HAND ==
+
+.ROM_unical
+	ld ix,unical
+	ld de,unicallen
+	ld a,unical1
+	jp ROM_charset
+
+	;== Install BLOCKED CHARS ==
+
+.ROM_blocked
+	ld ix,blocked
+	ld de,blockedlen
+	ld a,blocked1
+	jp ROM_charset
+
+	;== Install STYLITE ==
+
+.ROM_stylite
+	ld ix,stylite
+	ld de,stylitelen
+	ld a,stylite1
+	jp ROM_charset
+
+	
+	;== Move character set to RAM ==
+	;entry	ix=address of set
+	;	de=length of set
+	;	a=first character
+
+.ROM_charset
+	ld c,a			;keep first
+	call #BBAE		;TXT GET M TABLE
+	ret nc
+	ld b,a
+	ld a,c
+	sub a,b			;is there enough room?
+	ret c
+	push de			;save length
+	ex de,hl
+	ld l,a
+	ld h,0
+	add hl,hl		;*2
+	add hl,hl		;*4
+	add hl,hl		;*8
+	add hl,de		;(first-firstch)*8+mtable
+	ex de,hl		;=destination
+	push ix: pop hl		;source
+	pop bc			;length
+	ldir			;copy into RAM
+	ret
+
+	;== CHARACTER TABLES ==
+
+.unical
+.unical1	equ 97		;first unical char
+
+	byte 0,120,12,60,102,206,123,0
+	byte 0,220,102,124,102,102,60,0
+	byte 0,56,76,192,192,196,120,0
+	byte 112,24,124,198,198,198,124,0
+	byte 0,56,76,192,240,196,120,0
+	byte 0,222,96,96,120,96,96,64
+	byte 0,56,76,192,196,204,124,12
+	byte 224,96,108,118,102,102,110,0
+	byte 0,56,24,24,24,24,28,0
+	byte 0,56,24,24,24,24,24,112
+	byte 224,102,100,104,120,109,102,0
+	byte 224,96,96,96,96,96,126,2
+	byte 0,108,214,214,214,214,84,0
+	byte 0,238,102,118,126,110,103,0
+	byte 0,56,76,198,198,100,56,0
+	byte 0,236,118,102,100,120,96,192
+	byte 0,56,76,198,198,100,61,14
+	byte 0,236,118,102,100,120,109,70
+	byte 0,60,70,192,124,6,252,0
+	byte 0,254,178,48,48,48,56,0
+	byte 0,238,102,198,198,206,119,0
+	byte 0,230,98,98,98,52,24,0
+	byte 0,206,198,214,214,214,104,0
+	byte 0,230,100,56,24,44,70,192
+	byte 0,230,98,52,24,24,24,16
+	byte 0,254,140,24,48,98,254,2
+
+.unicallen equ $-unical
+
+.blocked
+.blocked1	equ 160
+
+	byte 0,0,0,0,0,0,0,0
+	byte 254,238,238,238,254,238,254,0
+	byte 254,214,214,254,254,254,254,0
+	byte 254,214,130,214,130,214,254,0
+	byte 238,194,174,198,234,134,238,0
+	byte 254,154,150,238,210,178,254,0
+	byte 222,174,222,170,182,202,254,0
+	byte 254,230,230,206,254,254,254,0
+	byte 254,246,238,238,238,246,254,0
+	byte 254,238,246,246,246,238,254,0
+	byte 254,214,238,130,238,214,254,0
+	byte 254,238,238,130,238,238,254,0
+	byte 254,254,254,230,230,206,254,0
+	byte 254,254,254,130,254,254,254,0
+	byte 254,254,254,230,230,254,254,0
+	byte 254,250,246,238,222,190,254,0
+	byte 254,198,178,170,154,198,254,0
+	byte 254,238,206,238,238,238,254,0
+	byte 254,198,186,230,222,130,254,0
+	byte 254,198,186,230,186,198,254,0
+	byte 254,246,230,214,130,246,254,0
+	byte 254,130,190,134,250,134,254,0
+	byte 254,198,190,134,186,198,254,0
+	byte 254,130,250,246,238,222,254,0
+	byte 254,198,186,198,186,198,254,0
+	byte 254,198,186,194,250,198,254,0
+	byte 254,254,230,254,230,254,254,0
+	byte 254,254,230,254,230,206,254,0
+	byte 254,246,238,222,238,246,254,0
+	byte 254,254,130,254,130,254,254,0
+	byte 254,238,246,250,246,238,254,0
+	byte 254,198,186,246,238,254,238,0
+	byte 254,198,178,162,190,194,254,0
+	byte 254,198,186,186,130,186,254,0
+	byte 254,134,218,198,218,134,254,0
+	byte 254,198,186,190,186,198,254,0
+	byte 254,134,218,218,218,134,254,0
+	byte 254,130,190,134,190,130,254,0
+	byte 254,130,190,134,190,190,254,0
+	byte 254,194,190,162,186,198,254,0
+	byte 254,186,186,130,186,186,254,0
+	byte 254,198,238,238,238,198,254,0
+	byte 254,194,246,246,182,206,254,0
+	byte 254,182,174,158,174,182,254,0
+	byte 254,190,190,190,190,130,254,0
+	byte 254,186,146,170,186,186,254,0
+	byte 254,186,154,170,178,186,254,0
+	byte 254,198,186,186,186,198,254,0
+	byte 254,134,186,134,190,190,254,0
+	byte 254,198,186,170,182,202,254,0
+	byte 254,134,186,134,182,186,254,0
+	byte 254,194,190,198,250,134,254,0
+	byte 254,130,238,238,238,238,254,0
+	byte 254,186,186,186,186,198,254,0
+	byte 254,186,186,186,214,238,254,0
+	byte 254,186,186,170,146,186,254,0
+	byte 254,186,214,238,214,186,254,0
+	byte 254,186,214,238,238,238,254,0
+	byte 254,130,246,238,222,130,254,0
+	byte 254,198,222,222,222,198,254,0
+	byte 254,190,222,238,246,250,254,0
+	byte 254,198,246,246,246,198,254,0
+	byte 254,238,198,170,238,238,254,0
+	byte 254,254,254,254,254,130,254,0
+	byte 254,206,206,230,254,254,254,0
+	byte 254,198,250,194,186,194,254,0
+	byte 254,190,134,186,186,134,254,0
+	byte 254,254,198,190,190,198,254,0
+	byte 254,250,194,186,186,194,254,0
+	byte 254,198,186,134,190,198,254,0
+	byte 254,198,190,134,190,190,254,0
+	byte 254,194,186,194,250,198,254,0
+	byte 254,190,190,134,186,186,254,0
+	byte 254,238,254,238,238,238,254,0
+	byte 254,246,254,246,246,142,254,0
+	byte 254,190,174,158,174,182,254,0
+	byte 254,238,238,238,238,238,254,0
+	byte 254,254,214,170,170,170,254,0
+	byte 254,254,198,186,186,186,254,0
+	byte 254,254,198,186,186,198,254,0
+	byte 254,134,186,186,134,190,254,0
+	byte 254,194,186,186,194,250,254,0
+	byte 254,254,166,154,190,190,254,0
+	byte 254,198,190,198,250,134,254,0
+	byte 254,222,134,222,218,230,254,0
+	byte 254,254,186,186,186,198,254,0
+	byte 254,254,186,186,214,238,254,0
+	byte 254,254,186,186,170,214,254,0
+	byte 254,254,186,214,214,186,254,0
+	byte 254,186,186,194,250,198,254,0
+	byte 254,130,246,238,222,130,254,0
+	byte 254,230,222,158,222,230,254,0
+	byte 254,238,238,254,238,238,254,0
+	byte 254,158,238,230,238,158,254,0
+	byte 254,214,174,254,254,254,254,0
+
+.blockedlen	equ $-blocked
+
+.stylite
+.stylite1	equ 33
+
+	byte 24,24,24,24,24,0,24,0
+	byte 204,204,204,0,0,0,0,0
+	byte 108,108,254,108,254,108,108,0
+	byte 40,126,168,124,42,252,40,0
+	byte 0,198,204,24,48,102,198,0
+	byte 56,108,56,118,220,204,118,0
+	byte 24,24,48,0,0,0,0,0
+	byte 12,24,48,48,48,24,12,0
+	byte 48,24,12,12,12,24,48,0
+	byte 0,204,120,204,120,204,0,0
+	byte 0,24,24,126,24,24,0,0
+	byte 0,0,0,0,0,56,56,112
+	byte 0,0,0,254,0,0,0,0
+	byte 0,0,0,0,0,56,56,0
+	byte 6,12,24,48,96,192,128,0
+	byte 124,198,206,214,230,198,124,0
+	byte 24,56,24,24,24,24,60,0
+	byte 124,198,6,124,192,192,254,0
+	byte 124,198,6,28,6,198,124,0
+	byte 60,108,204,204,254,12,12,0
+	byte 254,192,192,252,6,198,124,0
+	byte 124,198,192,252,198,198,124,0
+	byte 254,6,6,12,24,48,48,0
+	byte 124,198,198,124,198,198,124,0
+	byte 124,198,198,126,6,198,124,0
+	byte 0,0,56,56,0,56,56,0
+	byte 0,0,56,56,0,56,56,112
+	byte 12,24,48,96,48,24,12,0
+	byte 0,0,254,0,0,254,0,0
+	byte 96,48,24,12,24,48,96,0
+	byte 124,198,198,28,56,0,56,0
+	byte 124,198,222,222,222,192,124,0
+	byte 56,108,198,198,254,198,198,0
+	byte 252,198,198,252,198,198,252,0
+	byte 124,198,192,192,192,198,124,0
+	byte 252,198,198,198,198,198,252,0
+	byte 254,192,192,248,192,192,254,0
+	byte 254,192,192,248,192,192,192,0
+	byte 124,198,192,192,206,198,126,0
+	byte 198,198,198,254,198,198,198,0
+	byte 60,24,24,24,24,24,60,0
+	byte 6,6,6,6,198,198,124,0
+	byte 198,204,216,240,216,204,198,0
+	byte 192,192,192,192,192,192,254,0
+	byte 198,238,254,214,198,198,198,0
+	byte 198,230,246,222,206,198,198,0
+	byte 124,198,198,198,198,198,124,0
+	byte 252,198,198,252,192,192,192,0
+	byte 124,198,198,198,218,204,118,0
+	byte 252,198,198,252,216,204,198,0
+	byte 124,198,192,124,6,198,124,0
+	byte 126,24,24,24,24,24,24,0
+	byte 198,198,198,198,198,198,124,0
+	byte 198,198,198,198,108,56,16,0
+	byte 198,198,198,214,254,238,198,0
+	byte 198,108,56,56,108,198,198,0
+	byte 102,102,102,60,24,24,24,0
+	byte 254,6,12,24,48,96,254,0
+	byte 60,48,48,48,48,48,60,0
+	byte 192,96,48,24,12,6,2,0
+	byte 60,12,12,12,12,12,60,0
+	byte 24,60,126,24,24,24,24,0
+	byte 0,0,0,0,0,0,0,255
+	byte 48,48,24,0,0,0,0,0
+	byte 0,0,124,6,126,198,126,0
+	byte 192,192,252,198,198,198,252,0
+	byte 0,0,124,198,192,198,124,0
+	byte 6,6,126,198,198,198,126,0
+	byte 0,0,124,198,254,192,124,0
+	byte 60,102,96,248,96,96,96,0
+	byte 0,0,126,198,198,126,6,252
+	byte 192,192,252,198,198,198,198,0
+	byte 24,0,24,24,24,24,24,0
+	byte 6,0,6,6,6,198,198,124
+	byte 192,192,198,204,248,204,198,0
+	byte 24,24,24,24,24,24,24,0
+	byte 0,0,108,254,214,214,198,0
+	byte 0,0,124,198,198,198,198,0
+	byte 0,0,124,198,198,198,124,0
+	byte 0,0,252,198,198,252,192,192
+	byte 0,0,126,198,198,126,6,6
+	byte 0,0,220,230,192,192,192,0
+	byte 0,0,124,192,124,6,252,0
+	byte 96,96,248,96,96,102,60,0
+	byte 0,0,198,198,198,198,126,0
+	byte 0,0,198,198,198,108,56,0
+	byte 0,0,198,214,214,254,108,0
+	byte 0,0,198,108,56,108,198,0
+	byte 0,0,198,198,198,126,6,124
+	byte 0,0,254,12,56,96,254,0
+	byte 14,24,24,112,24,24,14,0
+	byte 24,24,24,0,24,24,24,0
+	byte 112,24,24,14,24,24,112,0
+	byte 118,220,0,0,0,0,0,0
+
+.stylitelen	equ $-stylite
