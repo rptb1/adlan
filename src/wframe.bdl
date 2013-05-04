@@ -1,0 +1,134 @@
+1 ''
+100 '                        (ADLAN WINDOW FRAMEWORK FILE)
+110 '
+120 'OPTIONS
+130 '   1; 0; <You can't go that way>; <^[1^L^O1>;
+140 'ENDOPTIONS
+150 '
+160 'MESSAGES
+170 '   $1    <Ok.>;
+180 '   $2    <I can't see any about.>;
+190 '   $3    <You don't have any.>;
+200 'ENDMESSAGES
+210 '
+220 'WORDS
+230 '   north/n; south/s; east/e; west/w;
+240 '   up/u;
+250 '   down/d;
+260 '
+270 '   take/get/grab/sieze;
+280 '   pick;          (pick up)
+290 '
+300 '   drop/leave;
+310 '   put;           (put down)
+320 '
+330 '   inventory/i/carry;
+340 '   look/l;
+350 '   examine; at;   (look at)
+360 '
+370 '   quit/stop;
+380 'ENDWORDS
+390 '
+400 'OBJECTS
+410 '   object,,,<test object>,<test obj desc>;
+420 'ENDOBJECTS
+430 '
+440 'PLACES [s]
+450 '   s,s2---,object,<test description>,{},{};
+460 '   s2,x1 s - s,,<another test>,{},{};
+470 '   x1,s s2 x1 -,,<yet another>,{},{};
+480 '   carry,----,,<>,{},{};
+490 'ENDPLACES
+500 '
+510 'START
+520 '{
+530 '   ink 0 black
+540 '   ink 1 brightyellow
+550 '   ink 2 cyan
+560 '   ink 3 pastelmagenta
+570 '   border cyan
+580 '
+590 '   print <^N2^L^N0>
+600 '   window 0 1 40 22 26             (commands)
+610 '   print <^L>
+620 '   window 1 1 29 1 20              (descriptions)
+630 '   window 2 31 40 1 15             (inventory)
+640 '   window 3 38 40 17 19            (directions)
+650 '   window 4 31 36 17 20 (anything)
+660 '}
+670 '
+680 '
+690 'BEFORE
+700 '{
+710 '   cr
+720 '   if both describing and count here
+730 '   {
+740 '      print <^O3\You can also see:\>
+750 '      list here cr
+760 '   }
+770 '
+780 '   print <^[2^^^O1Carry:^O3^T\>
+790 '   if count carry
+800 '   {
+810 '      list carry
+820 '   }
+830 '   else
+840 '   {
+850 '      print <nothing>
+860 '   }
+870 '
+880 '   print <^[3^L    +>
+890 '   exits <^_^B^AN> <^_^B^CS> <^_^C^BE> <^_^A^BW> <>
+900 '
+910 '   print <^[4> display random 100 cr
+920 '
+930 '   print <^[0^O3^P^X*^X^O1 >
+940 '}
+950 '
+960 'AFTER
+970 '{
+980 '   if typed quit
+990 '   {
+1000 '     print <Are you sure you want to quit? (Y/N)>
+1010 '     if yesno { quit }
+1020 '     done
+1030 '  }
+1040 '
+1050 '  if typed [take/pick up]
+1060 '  {
+1070 '     if find item 1 at carry
+1080 '     {
+1090 '        print <You've already got that.> done
+1100 '     }
+1110 '     if not find item 1 at here
+1120 '     {
+1130 '        print $2 done
+1140 '     }
+1150 '     move item 1 from here to carry
+1160 '     print $1 done
+1170 '  }
+1180 '
+1190 '  if typed [drop/put down]
+1200 '  {
+1210 '     if not find item 1 at carry
+1220 '     {
+1230 '        print $3 done
+1240 '     }
+1250 '     move item 1 from carry to here
+1260 '     print $1 done
+1270 '  }
+1280 '
+1290 '  if typed [examine/look at]
+1300 '  {
+1310 '     if not find item 1 at here/carry
+1320 '     {
+1330 '        print <There's no more detail on that here.> done
+1340 '     }
+1350 '     examine item 1
+1360 '     done
+1370 '  }
+1380 '
+1390 '  if typed look { describe done }
+1400 '
+1410 '  print <I don't understand.>
+1420 '}

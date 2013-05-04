@@ -1,0 +1,133 @@
+                        (ADLAN WINDOW FRAMEWORK FILE)
+
+OPTIONS
+  1; 0; <You can't go that way>; <^[1^L^O1>;
+ENDOPTIONS
+
+MESSAGES
+  $1    <Ok.>;
+  $2    <I can't see any about.>;
+  $3    <You don't have any.>;
+ENDMESSAGES
+
+WORDS
+  north/n; south/s; east/e; west/w;
+  up/u;
+  down/d;
+
+  take/get/grab/sieze;
+  pick;          (pick up)
+
+  drop/leave;
+  put;           (put down)
+
+  inventory/i/carry;
+  look/l;
+  examine; at;   (look at)
+
+  quit/stop;
+ENDWORDS
+
+OBJECTS
+  object,,,<test object>,<test obj desc>;
+ENDOBJECTS
+
+PLACES [s]
+  s,s2---,object,<test description>,{},{};
+  s2,x1 s - s,,<another test>,{},{};
+  x1,s s2 x1 -,,<yet another>,{},{};
+  carry,----,,<>,{},{};
+ENDPLACES
+
+START
+{
+  ink 0 black
+  ink 1 brightyellow
+  ink 2 cyan
+  ink 3 pastelmagenta
+  border cyan
+
+  print <^N2^L^N0>
+  window 0 1 40 22 26  (commands)
+  print <^L>
+  window 1 1 29 1 20   (descriptions)
+  window 2 31 40 1 15  (inventory)
+  window 3 38 40 17 19 (directions)
+  window 4 31 36 17 20 (anything)
+}
+
+
+BEFORE
+{
+  cr
+  if both describing and count here
+  {
+     print <^O3\You can also see:\>
+     list here cr
+  }
+
+  print <^[2^^^O1Carry:^O3^T\>
+  if count carry
+  {
+     list carry
+  }
+  else
+  {
+     print <nothing>
+  }
+
+  print <^[3^L    +>
+  exits <^_^B^AN> <^_^B^CS> <^_^C^BE> <^_^A^BW> <>
+
+  print <^[4> display random 100 cr
+
+  print <^[0^O3^P^X*^X^O1 >
+}
+
+AFTER
+{
+  if typed quit
+  {
+     print <Are you sure you want to quit? (Y/N)>
+     if yesno { quit }
+     done
+  }
+
+  if typed [take/pick up]
+  {
+     if find item 1 at carry
+     {
+        print <You've already got that.> done
+     }
+     if not find item 1 at here
+     {
+        print $2 done
+     }
+     move item 1 from here to carry
+     print $1 done
+  }
+
+  if typed [drop/put down]
+  {
+     if not find item 1 at carry
+     {
+        print $3 done
+     }
+     move item 1 from carry to here
+     print $1 done
+  }
+
+  if typed [examine/look at]
+  {
+     if not find item 1 at here/carry
+     {
+        print <There's no more detail on that here.> done
+     }
+     examine item 1
+     done
+  }
+
+  if typed look { describe done }
+
+  print <I don't understand.>
+}

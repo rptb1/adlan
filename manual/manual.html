@@ -1,0 +1,2080 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
+
+<!-- Converted from PROTEXT source using BBEdit 5.1.1 -->
+
+<!-- Note: STREAM command isn't documented, at least not under a heading of its own.  RB 1999-09-18 -->
+<!-- Note: SORT command isn't documented under its own heading.  RB 1999-09-20 -->
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+
+<title>Adlan User Manual</title>
+
+<link rev="made" href="mailto:Richard.Brooksby@pobox.com" />
+
+<link rel="stylesheet" href="/default.css" type="text/css" />
+
+<link rel="STYLESHEET" href="manual.css" type="text/css" />
+
+</head>
+
+<body>
+
+<h1>
+The Adlan Compiler<br />
+for the<br />
+Amstrad CPC range of computers<br />
+User Manual <a href="#section-B">version 2.8</a><br />
+by<br />
+Richard Brooksby, September 1987</h1>
+
+<p><small>Copyright &copy; 1987, 1999, 2000 Richard Brooksby.  You may make and distribute verbatim copies of this document provided that you retain as they appear all copyright and licence notices.  You may <em>not</em> charge a fee for this document or for distributing this document.  You may <em>not</em> make or distribute derivative works (modified versions) of this document without the express written permission of the copyright holder.</small></p>
+
+
+<h2>Contents</h2>
+
+<ol>
+
+<li><a href="#section-1">ADLAN compiling and loading instructions.</a></li>
+
+<li><a href="#section-2">About writing adventures.  Get it down on paper.</a></li>
+
+<li><a href="#section-3">Entering the data.</a></li>
+
+<li><a href="#section-4">About words.  How to get the computer to understand.</a></li>
+
+<li><a href="#section-5">ADLAN commands and routines, expressions and conditions.</a></li>
+
+<li><a href="#section-6">The START, DESCRIPTION, BEFORE and AFTER routines.</a></li>
+
+<li><a href="#section-7">Getting graphics into ADLAN adventures.</a></li>
+
+<li><a href="#section-8">Special character sets, and italics.</a></li>
+
+<li><a href="#section-9">All about strings.</a></li>
+
+<li><a href="#section-10">More about colours and windows.</a></li>
+
+<li><a href="#section-11">Errors.</a></li>
+
+<li><a href="#section-12">The framework file.</a></li>
+
+<li><a href="#section-A">Disc and tape contents.</a></li>
+
+<li><a href="#section-B">Document history</a></li>
+
+</ol>
+
+
+<h2><a id="section-1" name="section-1">1. Adlan Compiler</a></h2>
+
+
+<h3><a id="section-1.1" name="section-1.1">1.1. Installing the ADLAN ROM</a></h3>
+
+<p>The ROM version is supplied on a 16K ROM chip, and requires that it is fitted in a ROM board (see instructions with ROM board.)  Once fitted, the ROM version is always available.  If the message:</p>
+
+<blockquote><samp>*** ADLAN ERROR: unsuitable environment ***</samp></blockquote>
+
+<p>appears when you switch on, either ADLAN cannot find BASIC 1.0 or 1.1 in ROM slot zero (a rare occurrence), or another ROM is using the lower data area.  The latter problem is solved by placing the ADLAN ROM in the highest slot on your ROM board.  The former problem is solved by removing the ROM that is in slot zero, and putting it somewhere else on the board.  The ROM version uses about 3K of memory, but leaves a great deal of room for adventures.</p>
+
+<p>To compile MAXAM or PROTEXT text from memory, use the external command:</p>
+
+<blockquote><code>ADLAN</code></blockquote>
+
+<p>or use</p>
+
+<blockquote><code>ADLAN filename</code></blockquote>
+
+<p>to compile directly from an ASCII or PROTEXT file.  (To enter external commands from MAXAM select X on the menu.  From PROTEXT simply type them in command mode.)  Compiling from a file will allow larger adventures, since more memory is available for the finished code.</p>
+
+<!-- Because no memory is occupied by the source code text.  RB 1999-09-18 -->
+
+<p>If you are using a word processor or text editor other than PROTEXT or MAXAM, save the source code onto disc in ASCII form (see the manual for the editor) and then compile from BASIC using the command:</p>
+
+<blockquote><code>|ADLAN,"filename"</code></blockquote>
+
+<p>(on the CPC664 or 6128) or</p>
+
+<blockquote><code>a$="filename":|ADLAN,@a$</code></blockquote>
+
+<p>(on the CPC464).</p>
+
+
+<h3><a id="section-1.2" name="section-1.2">1.2. Compiling from BASIC REM statements</a></h3>
+
+<p>The BASIC editor can be used to edit ADLAN programs, by writing the source code into quote-REM statements.  Type in the source code like a BASIC program, putting a single quote (<code>'</code>) before each line.  The first line of the source code should contain two single quotes (<code>''</code>).  For example</p>
+
+<blockquote><pre>
+10 ''
+20 '   (Example Program from BASIC)
+30 '
+40 'OPTIONS</pre>
+etc...
+</blockquote>
+
+<p>To compile the program type</p>
+
+<blockquote><code>|ADL</code></blockquote>
+
+<p>ADLAN programs can be mixed with BASIC, provided the first line of the source is marked with the two quotes, and the rest of the source follows immediately afterwards.</p>
+
+
+<h3><a id="section-1.3" name="section-1.3">1.3. File Inclusion and Appendation</a></h3>
+
+<p>If, during the file, a star (<code>*</code>) is encountered at the very beginning of a line, the rest of the line is taken as a file name.  ADLAN then "opens" that file and compiles its contents as if it were part of the text at that point.  This allows you to free memory by saving blocks of text on to disc.  This is called file inclusion, and is only available to those using PROTEXT, MAXAM, or BASIC, and compiling from the text in memory.  It cannot be used in a file because the AMSTRAD CPC operating system allows only one file to be open at once.</p>
+
+<p>If a star is encountered at the beginning of a line in a file, the compilation is continued from the file with the name given, but the rest of the first file is ignored.  This allows files to be linked together in a chain.</p>
+
+<p>In order to compile files written using BASIC quote-REMs, save the files in ASCII format.  For example, to save a whole program:</p>
+
+<blockquote>
+<code>SAVE "filename",a</code>
+</blockquote>
+
+<p>To save the code between lines 100 and 150:</p>
+
+<blockquote><pre>
+OPENOUT "filename": LIST 100-150,#9
+CLOSEOUT
+</pre></blockquote>
+
+<p>BASIC files to be compiled using the star (<code>*</code>) option (<a href="#section-1.3">see 1.3</a>) should not contain the initial two single-quotes of the main program.</p>
+
+
+<h3><a id="section-1.4" name="section-1.4">1.4. Other Commands on the ADLAN ROM</a></h3>
+
+<p>Several other useful external commands are built into the ADLAN ROM:</p>
+
+
+<h4><a id="section-1.4.1" name="section-1.4.1">1.4.1. <code>COMPRESS,&lt;filename&gt;,&lt;buffer&gt;</code></a></h4>
+
+<p><a href="#section-7">See chapter 7</a>.</p>
+
+
+<h4><a id="section-1.4.2" name="section-1.4.2">1.4.2. <code>ROMOFF,&lt;list of:&lt;rom nr&gt;,&gt;</code></a></h4>
+
+<p>Some programs will not run while ROMs are installed, and this is particularly true of games, and of the ADLAN ROM.  The ROMOFF command allows any background ROMs (including ADLAN) to be switched off, releasing the memory that they use.  Stating a ROM number of zero will switch of the ADLAN ROM, which ever slot it is in.  e.g.</p>
+
+<blockquote><code>|ROMOFF,1,4,2,0</code></blockquote>
+
+<p>switches off ROMs 1,4,2 and ADLAN (ROM 7 is the disc ROM)</p>
+
+<p>Unfortunately, this will not always cure the problem, since some programs stupidly turn all the ROMs back on again!  In such cases try the RUN command (<a href="#section-1.4.3">1.4.3</a>), although sometimes the only solution is often to switch off, unplug your ROM board, and try again.</p>
+
+
+<h4><a id="section-1.4.3" name="section-1.4.3">1.4.3. <code>RUN,&lt;filename&gt;</code></a></h4>
+
+<p>This command will sometimes cure the problems of programs clashing with ROMs.  It will only operate with binary files, but it is usually these which cause a problem.  If a program will not run with ADLAN installed, and the <a href="#section-1.4.2">ROMOFF command</a> does not help, try:</p>
+
+<blockquote><code>|RUN,"name of program"</code></blockquote>
+
+<p>(on the CPC664 and 6128)</p>
+
+<blockquote><code>a$="name of program":|RUN,@a$</code></blockquote>
+
+<p>(on the CPC464)</p>
+
+
+<h4><a id="section-1.4.4" name="section-1.4.4">1.4.4. <code>ADLAN.HELP</code></a></h4>
+
+<p>This command displays a series of "help screens" which show the syntax of all the ADLAN commands and expressions.</p>
+
+
+<h4><a id="section-1.4.5" name="section-1.4.5">1.4.5. <code>ADLAN.INFO</code></a></h4>
+
+<p>Displays information about the ADLAN compiler.</p>
+
+
+<h4><a id="section-1.4.6" name="section-1.4.6">1.4.6. <code>UNICAL</code></a></h4>
+
+<p>Installs the "unical hand" character set, provided the symbol table had been allocated.  For example (from BASIC):</p>
+
+<blockquote><pre>
+SYMBOL AFTER 97
+|UNICAL
+</pre></blockquote>
+
+<p align="center"><img src="unical.gif" alt="(screen capture of the unical character set)" width="414" height="44" /></p>
+
+
+<h4><a id="section-1.4.7" name="section-1.4.7">1.4.7. <code>BLOCKED</code></a></h4>
+
+<p>Installs the "blocked chars" character set on the italics, provided the symbol table is allocated.  For example (from BASIC):</p>
+
+<blockquote><pre>
+SYMBOL AFTER 160
+|BLOCKED
+</pre></blockquote>
+
+<p>Blocked chars are best used in mode 1.  They can be difficult to read in mode 2, especially on colour monitors.</p>
+
+<p align="center"><img src="blocked.gif" width="291" height="112" alt="(screen capture of the blocked character set)" /></p>
+
+
+<h4><a id="section-1.4.8" name="section-1.4.8">1.4.8. <code>STYLITE</code></a></h4>
+
+<p>Installs the "stylite" character set, provided the symbol table is allocated.  For example (from BASIC):</p>
+
+<blockquote><pre>
+SYMBOL AFTER 33
+|STYLITE
+</pre></blockquote>
+
+<p>Stylite is an attractive "clean" character set, which can be read easily in all modes.</p>
+
+<p align="center"><img src="stylite.gif" width="517" height="92" alt="(screen capture of stylite character set)" /></p>
+
+
+<h2><a id="section-2" name="section-2">2. Writing Adventures</a></h2>
+
+<p>Before you start bashing away at your keyboard you need to know what you're going to write.  You must know what is going to happen in the adventure, and what task the player has to perform.  If you start without a plan you get a huge number of mistakes and errors, and your adventure will end up being messy and unatmospheric.  To illustrate what needs to be done here is an example.</p>
+
+<p>This will be a very small adventure in which the player must escape from a cave.  Here is the map:</p>
+
+<pre>
++-------------------------------+               N
+|Exit  &lt;----  Top of grown plant|            ^
++-------------------------------+            W--o--E
+                ^                               |
+               /                                S
+              /UP/CLIMB PLANT
+ +-----start------+    +----------------+              +-----------+
+ |West end of room|----|East end of room|--rusty gate--|Alcove with|
+ |  SMALL PLANT   |    |   RUSTY GATE *1| (needs oil)  |           |
+ +----------------+    +----------------+              |   water   |
+           /DOWN                /DOWN                  +-----------+
+          /                    /
+         /UP                  /UP
+ +----------+           +----------+    *1 = Picture: RUSTGATE.CSC
+ | West pit |           | East pit |
+ |  BOTTLE  |           |   oil    |
+ +----------+           +----------+
+</pre>
+
+<p>The map follows a definite system.  North, south, east and west links are all horizontal and vertical.  Links of other kinds are diagonal and are labeled with the means of moving.  One-way links are shown with arrows.  Each location is in a box, and objects are all in capital letters, at the location where they start.  Where the way is blocked by a rusty gate the puzzle and solution are written.  Where there is to be a picture the filename of the picture is defined.</p>
+
+<p>In this adventure the player must take the bottle, fill it with oil and oil the gate.  He must then fill the bottle with water and water the plant.  He can then climb the grown plant and escape.</p>
+
+<p>There are three objects in the adventure, although the player can only move one of them.  These are the bottle, the gate and the plant.  The  gate and plant are both put in as objects because they are things which will change in the adventure.</p>
+
+<p>Pictures are only really practical to disc users, since the picture is loaded and de-compressed every time it is drawn on the screen.  This allows very complex pictures to be included, without taking up any memory space.  When writing an adventure for tape you should not use pictures, or at least be very careful with their order of appearance.</p>
+
+<p>There is no need to do anything more to your adventure, unless you want to clarify puzzles further.  It is, however, important to realise what will happen when puzzles are solved wrongly.</p>
+
+
+<h2><a id="section-3" name="section-3">3. Entering the Data</a></h2>
+
+<p>Now is the time to switch on the computer and start up your word processor or text editor.  You should enter text with a carriage return at the end of each line (this usually means pressing <kbd>[ENTER]</kbd> or <kbd>[RETURN]</kbd> at the end of the line) except when you are typing strings.  Strings are descriptions, messages and other text that ends up on the screen (for a full description of strings <a href="#section-9">see chapter 9</a>).  These can be formatted by your word processor.  If you are using a simple editor which cannot format (such as MAXAM, or BASIC) you must press <kbd>[ENTER]</kbd> or <kbd>[RETURN]</kbd> at the end of every line.  BASIC, of course, also requires line numbers and quotes.</p>
+
+<p>If you aren't using PROTEXT or MAXAM then your file must be saved in ASCII form before compiling.  It must always be saved in ASCII form (see your word processor manual, this is often called "printing to a file").  PROTEXT users need not save their source code in ASCII form.  The normal SAVE command is fine.  MAXAM always saves in ASCII form.</p>
+
+<p>You can type in either upper or lower case, they are the same thing to ADLAN (except in strings).</p>
+
+<p>ADLAN uses brackets to denote a comment, like a REM in basic.  Anything between the open bracket and close bracket is ignored.  You can put comments anywhere where you could put a space, except in strings.  Everything in a string is printed (<a href="#section-9">see chapter 9</a>).  Also any line beginning with a greater that symbol (<code>&gt;</code>) is ignored.  This allows you to use PROTEXT stored commands (such as headers and footers) without upsetting the program.</p>
+
+<p>ADLAN expects to see the information for the adventure in the following order:</p>
+
+<ol>
+
+<li><a href="#section-3.1">Options</a></li>
+
+<li><a href="#section-3.2">Messages</a></li>
+
+<li><a href="#section-3.3">Words</a> (except nouns)</li>
+
+<li><a href="#section-3.4">Objects</a></li>
+
+<li><a href="#section-3.5">Places</a></li>
+
+<li><a href="#section-6">START routine</a> (optional)</li>
+
+<li><a href="#section-6">BEFORE routine</a></li>
+
+<li><a href="#section-6">AFTER routine</a></li>
+
+</ol>
+
+
+<h3><a id="section-3.1" name="section-3.1">3.1. <code>OPTIONS</code></a></h3>
+
+<p>These are a few things that ADLAN needs to know before it goes any further.  So far the example program looks like this.</p>
+
+<pre>
+(ADLAN EXAMPLE ADVENTURE)
+
+OPTIONS
+        2; 0; &lt;You can't go that way&gt;; &lt;^L&gt;;
+ENDOPTIONS
+</pre>
+
+<p>The first option is the screen mode in which the adventure will start.  Mode 2 has 80 columns and is probably the mode in which your word processor works.  However, mode 2 can be difficult to read on a colour monitor.  If you use mode 1 you must restrict your strings to 40 columns per line.</p>
+
+<p>The second option is the number of variables which you are going to use in the program.  Variables are explained in <a href="#section-5">chapter 5</a>.</p>
+
+<p>The third option is the string which will be printed whenever the player tries to go in a direction which he is not allowed to go in.</p>
+
+<p>The final option is a string which is printed before every description.  Here it is a control code which will clear the screen (<a href="#section-9">see chapter 9</a>).  You could put a string such as <code>&lt;^LYou are &gt;</code> so that your descriptions might start <code>&lt;in a</code>...  This will save space in your descriptions, but does limit your grammar a bit.  The string is printed immediately after executing the DESCRIPTION routine, if any exists (<a href="#section-6">see chapter 6</a>).</p>
+
+<p>An extra option is also available for more advanced users who wish to include machine code routines in their adventures.  eg.</p>
+
+<pre>
+OPTIONS
+        2; 0; &lt;You can't go that way&gt;; &lt;^L&gt;; 500;
+ENDOPTIONS
+</pre>
+
+<p>This will reserve 500 bytes of empty space in the program where machine code routines can be loaded and run.  The address of the buffer is displayed during compilation, and will be needed to write the code.  <a href="#section-5">See chapter 5</a>, <a href="#command-CALLMC">CALLMC</a> and <a href="#command-LOADMC">LOADMC</a> for details of how to load and execute machine code.</p>
+
+<p><strong>Warning</strong>: The address of the buffer may be different every time the adventure is compiled.</p>
+
+
+<h3><a id="section-3.2" name="section-3.2">3.2. <code>MESSAGES</code></a></h3>
+
+<p>Numbered messages are strings which are used over and over again.  To save space they are only typed in once, and then used with the <a href="#command-PRINT">PRINT command (q.v.)</a>.  Lettered messages are displayed after object names which have matching status letters.  Numbered messages can be in the range $1 to $32767.  Messages do not have to be in any particular order.  However, when ADLAN is looking for a message it searches from top to bottom.  To make the listing of objects faster it is best to put the status (lettered) messages first.</p>
+
+<pre>
+MESSAGES
+        S       &lt;, small, weak and feeble, murmuring "water... water..."&gt;;
+        T       &lt;towering above you, shouting "WATER! WATER!"&gt;;
+        C       &lt;, rusted closed&gt;;
+        W       &lt;of water&gt;;
+        O       &lt;of oil&gt;;
+        $1      &lt;Ok&gt;;
+        $2      &lt;I can't see any about&gt;;
+        $3      &lt;You don't have any&gt;;
+        $4      &lt;Nothing happens&gt;;
+ENDMESSAGES
+</pre>
+
+
+<h3><a id="section-3.3" name="section-3.3">3.3. <code>WORDS</code></a></h3>
+
+<p>These are all the words (apart from the names of objects) which the adventure will understand.  Alternative spellings of the same word are separated by a slash (<code>/</code>), and will be <em>indistinguishable</em> from each other.  The first four words are special.  They are the "direction" words, and will be used by the player to move around.  When the <a href="#section-3.5">PLACES are defined below</a>, each direction word refers to a "link" to another location.</p>
+
+<pre>
+WORDS
+        north/n; south/s; east/e; west/w;
+
+        look/l; at;             (look and look at)
+        examine;
+        inventory/i/carry;
+
+        take/get/grab/seize;
+        pick;                           (pick up)
+        up/u/climb;
+        drop/leave;
+        put;                            (put down)
+
+        down/d/descend;
+
+        fill;
+        oil/lubricate;
+        water/irrigate;
+
+        stop/quit;
+ENDWORDS
+</pre>
+
+<p>When you are writing you adventure you shouldn't expect to know all the words that you will need in your program.  The WORDS section grows as you go along.  A copy of <cite>Roget's Thesaurus</cite> is useful for alternative spellings.</p>
+
+
+<h3><a id="section-3.4" name="section-3.4">3.4. <code>OBJECTS</code></a></h3>
+
+<p>Each object is defined by the following information:</p>
+
+<blockquote>noun(s), status, attribute, name string, description string;</blockquote>
+
+<p>The nouns are defined just as the words were, eg: BOTTLE/FLASK etc.  ADLAN needs to know how many of these you are going to use in advance of creating the objects, so each noun must have it's own "slot" reserved.  Noun slots are reserved by placing the number in square brackets after the word OBJECTS.  If you leave out this number, together with the brackets, ADLAN will reserve 20.  Note that BOTTLE/FLASK uses two slots, even though they are alternative spellings of the same noun.</p>
+
+<p>The status is a set of letters which tell you about the object.  Eight status letters can be used in any one program, each letter being used as many times as you wish.  The letters can be looked at later on, and changed.  For example, here the letter W is used in our example to show that the bottle is full of water.  If you look back at the messages you will see that one of them has the letter W, and is the message <code>&lt;of water&gt;</code>.  Whenever an object with status letter W is displayed, it will have the message <code>&lt;of water&gt;</code> added.  Thus "a bottle" can become "a bottle of water".</p>
+
+<p>The attribute is a number between 0 and 65535 which can be used to mean anything you want.  You might use it to show weight, for example.  It is treated like a variable (q.v.) using the keyword ATTRIB (<a href="#section-5">see chapter 5</a>.)  In our example adventure the attribute is not used.</p>
+
+<p>The name is just that; the name of the object.  You must always have an article descriptor before the name, eg: a bottle, some leaves etc.</p>
+
+<p>Lastly comes the description of the object.  This can be as long or short as you want.  Note that the description below has been formatted by PROTEXT.  Note also that the string has a double angle bracket (<code>&lt;</code>) at the beginning.  When an angle bracket occurs in a string (except for the one that marks the beginning of the string) the rest of the line is ignored, including the carriage return.  This means that the description paragraph can be formatted by the word processor without it having an extra carriage return at the start.</p>
+
+<pre>
+(A programmers comment about the status letters:
+        Immovable, Small, Tall, Closed, full of Oil, full of Water)
+
+OBJECTS
+
+        plant/hydrangea,IS,,&lt;a plant&gt;,&lt;It looks like a hydrangea&gt;;
+
+        bottle/flask/flagon,,,&lt;a bottle &gt;,&lt;&lt;
+The bottle is small and made of brown glass. The stopper does not fit 
+properly.&gt;;
+
+
+        gate,IC,,&lt;an iron gate&gt;,&lt;&lt;
+The gate has some particularly fine scrollwork on it; alas, all rusted 
+and tarnished.&gt;;
+
+ENDOBJECTS
+</pre>
+
+
+<h3><a id="section-3.5" name="section-3.5">3.5. <code>PLACES</code></a></h3>
+
+<p>Next to appear in the program are the locations in which the game is played.  ADLAN requires the following information about a location:</p>
+
+<blockquote>
+location code, links to other locations, objects here, [picture name,] description, LOCAL BEFORE routine, LOCAL AFTER routine;
+</blockquote>
+
+<p>A location code can be any letter, followed by any number from 0 to 255.  If no number is used it is assumed to be zero.  So location A is the same as location A0.  It is best to reserve these "zero locations" for special purposes.  Each location has it's own unique code.</p>
+
+<p>The links to other locations correspond to the first four words that were defined.  For example, the location below is linked EAST to location R2.  If the link goes nowhere a dash (<code>-</code>) is used instead of a code.</p>
+
+<p>The objects here are simply the nouns of those objects, separated by spaces.  The objects will start the adventure at that location.</p>
+
+<p>If there is to be a picture at the location, the word PICTURE is inserted here, followed by a string which contains the name of the picture file.  This string must NOT CONTAIN SPACES.  Pictures are only really practical to disc users, since the picture is loaded and de-compressed every time it is required.  See below for an example of a picture in an adventure.</p>
+
+<p>The description is a string like the description of an object (<a href="#section-9">see chapter 9</a>).</p>
+
+<p>The LOCAL BEFORE routine is obeyed immediately before the BEFORE routine, but only when the player is at this location.  Similarly the LOCAL AFTER routine is obeyed immediately before the AFTER routine, but only at this location.  Routines and commands are dealt with in <a href="#section-5">chapter 5</a>.</p>
+
+<p>The location where the player will start their adventure must be placed in square brackets after the PLACES keyword.</p>
+
+<pre>
+PLACES  [r1]
+
+        r1,- - r2 -,plant,&lt;&lt;
+You are at the west end of an oval room, carved from grey stone. A 
+shaft of light comes through a hole high in the ceiling. In the floor 
+of the room are two pits, one at this end, one at the other. In the 
+wall above you is a hole, large enough for a person, but too high to 
+reach.&gt;,{},
+{
+        if both typed down and not typed put
+        {
+                moveto p1 describe loop
+        }
+
+        if both status plant is T and both typed up and not typed pick
+        {
+                moveto x describe loop  (Climbing the plant)
+        }
+};
+
+        r2,- - - r1,gate, picture &lt;rustgate.csc&gt;, &lt;&lt;
+You are at the east end of an oval room. In the east wall is an alcove 
+with a gate across it. There is a pit in the floor at this end of the 
+room.&gt;,
+{
+        if both describing and status gate is C
+        {
+                print &lt;\The alcove is blocked by the gate.&gt;
+        }
+},{
+        if both typed down and not typed put
+        {
+                moveto p2 describe loop
+        }
+};
+
+        p1,- - - -,bottle,&lt;&lt;
+You are in a steep-sided pit under the west end of the oval room. Some 
+rough handholds have been cut to allow climbing out of the pit.&gt;,{},
+{
+        if both typed up and not typed pick
+        {
+                moveto r1 describe loop
+        }
+};
+
+        p2,- - - -,,&lt;&lt;
+You are in a deep pit under the east end of the oval room. Gravel 
+makes climbing difficult. There is a pool of oil on the ground in the 
+pit.&gt;,{},
+{
+        if both typed up and not typed pick
+        {
+                moveto r2 describe loop
+        }
+};
+
+        a1,- - - r2,,&lt;&lt;
+You are in the alcove behind the gate. A small stream of water 
+trickles from a crack in the wall.&gt;,{},{};
+
+        x,----,,&lt;&lt;
+Well done. You have completed an extremely unchallenging adventure! 
+Now write a better one.&gt;,{ quit },{};
+
+        carry,----,,&lt;&gt;,{},{};
+
+ENDPLACES
+</pre>
+
+<p><a id="loc-carry" name="loc-carry">Notice, right at the end of the PLACES is a location called "carry".  This is the location where the objects which the player is carrying are put.  You must include this in your PLACES list if you are going to use it.  The reason that you must define it yourself is that you can then put objects there when the player first starts.  So he could start with his sword, for example.  Carry cannot be linked to, or moved to, so the LOCAL routines are ignored, along with the description and links.</a></p>
+
+<p><a id="loc-limbo" name="loc-limbo">There are two other special locations.  One is called "limbo".  You can move objects to and from limbo to remove and bring them into the game.  If an object is defined in the OBJECTS section, but not put anywhere in the PLACES section, it will be left in limbo.</a></p>
+
+<p><a id="loc-here" name="loc-here">The other special location is called "here".  This is simply the location where the player is.</a></p>
+
+<p>That is the end of the data which the adventure will need.  All that remains is to write the routines which handle it all!</p>
+
+
+<h2><a id="section-4" name="section-4">4. About Words</a></h2>
+
+<p>We'll take a break from all that typing and stuff to look at how the adventure will understand what the player is trying to say.</p>
+
+<p>The player is only allowed to type letters, and they will all be capitals.  Once he has typed his command, a program called a "parser" looks at it and extracts the meaningful bits.  For example, in our example adventure, if the player types:</p>
+
+<blockquote><kbd>PLEASE TAKE THE BOTTLE MY COMPUTER FRIEND</kbd></blockquote>
+
+<p>the parser will ignore all words it does not know, and will only see:</p>
+
+<blockquote><kbd>TAKE BOTTLE</kbd></blockquote>
+
+<p>Both words will be remembered and can later be checked using the <a href="#exp-TYPED">TYPED command</a>.  These words are said to have been TYPED.  The order in which the words were TYPED is not stored.  The parser can remember sixteen such words in a command.</p>
+
+<p>In addition, the BOTTLE is a noun of an object, so the parser also remembers it as an ITEM.  The parser will remember eight ITEMs, and their order IS important.  The first noun is called ITEM1, the second ITEM2 etc.  It does not matter if there is more than one spelling of a noun per object, they are all converted into numbers anyway.  All words separated by a slash (<code>/</code>) are given the same number.  You don't have to worry about the numbers, they are dealt with automatically by ADLAN.</p>
+
+<p>Since all words are remembered as being TYPED, they can be used as both nouns and verbs.  If the OIL was a separate object in our adventure, there would be a noun called OIL, and a verb OIL.  There is no need to put OIL in the WORDS section of the program, since it is already a noun.  In such a case, the command:</p>
+
+<blockquote><kbd>OIL GATE</kbd></blockquote>
+
+<p>would result in ITEM1=OIL, ITEM2=GATE, as well as OIL being remembered as TYPED.</p>
+
+<p>Checking whether a word has been typed is done using the TYPED command, for example:</p>
+
+<blockquote><pre>
+if typed oil
+{
+</pre>
+...
+</blockquote>
+
+<p>Also, if special combinations of words are needed, the <a href="#exp-TYPED">TYPED command</a> can be used with square brackets.  For example, you might want TAKE and PICK UP to mean the same thing, so to test for either use:</p>
+
+<blockquote><pre>
+if typed [take/pick up]
+{
+</pre>
+...
+</blockquote>
+
+<p>As another example, the verb WEAR is applicable to clothes, but if you wanted a player to WEAR some EARPLUGS, the sentence "PUT EARPLUGS IN" might make more sense.  To test for this use:</p>
+
+<blockquote><pre>
+if typed [wear/put earplugs in]
+{
+</pre>
+...
+</blockquote>
+
+<p>This will not respond to the player trying to "PUT TROUSERS IN", even though it will respond to "WEAR TROUSERS".</p>
+
+<p>With 16 words and 8 ITEMs to play with some complex sentences can be understood.  Especially useful is the use of adverbs.  These are defined in the WORDS section, and tested for using TYPED.  For example:</p>
+
+<blockquote><kbd>STAB THE MAN QUICKLY WITH THE KNIFE</kbd></blockquote>
+
+<p>QUICKLY can be tested for, and a different action taken from just:</p>
+
+<blockquote><kbd>STAB MAN WITH KNIFE</kbd></blockquote>
+
+<p>Also useful, you can check for separable verbs.  In our example adventure the command:</p>
+
+<blockquote><kbd>PICK THE BOTTLE UP</kbd></blockquote>
+
+<p>is recognised, but</p>
+
+<blockquote><kbd>PICK THE LOCK</kbd></blockquote>
+
+<p>can be distinguished and have a different meaning.</p>
+
+<p><strong>Very important</strong> Only the first four letters of any word are looked at, and care must be taken to avoid clashes.  For example, TROUT and TROUSERS are the same word.  If a clash occurs the word that was defined first will be seen by the parser.</p>
+
+<p>If you have two objects with the same name the <a href="#command-SWAP">SWAP command</a> can be used.  For example, in our example adventure we might have had two objects for the plant.  There could have been:</p>
+
+<blockquote><pre>
+plant,,,&lt;a small plant, murmuring "water... water"&gt;, ...
+xxxx,,,&lt;a huge plant, roaring "WATER!! WATER!!"&gt;, ...
+</pre></blockquote>
+
+<p>The second plant is given the noun XXXX.  When the huge plant comes into play the commands:</p>
+
+<blockquote><pre>
+move plant from r1 to limbo
+move xxxx from limbo to r1
+swap plant and xxxx
+</pre></blockquote>
+
+<p>are given.  The first two are described in <a href="#section-5">chapter 5</a>.  The third exchanges the numbers assigned to the nouns XXXX and PLANT.  This means that from now on, PLANT means the huge plant, and XXXX means the small plant.  If the <a href="#command-SWAP">SWAP command</a> had not been used, ADLAN would still think that PLANT meant the small plant.</p>
+
+<p>When there is more than one noun used with a verb, it may be useful to sort them into order.  Variable #0 will contain the number of objects that the player typed.  For example:</p>
+
+<blockquote><kbd>GIVE THE ELF THE GOLD<br />
+GIVE THE GOLD TO THE ELF</kbd></blockquote>
+
+<p>These might have the same meaning, but ITEM1 and ITEM2 are reversed in the second sentence.  The SORT command will sort all the ITEMs into the order in which they were defined in the OBJECTS section.  eg.  If ELF was defined first, the command SORT 2 would make both sentences look like:</p>
+
+<blockquote><kbd>GIVE THE ELF THE GOLD</kbd></blockquote>
+
+<p>If the player did not enter two recognisable nouns the SORT command will place zeros at the beginning.  So if the parser recognised:</p>
+
+<blockquote><kbd>GIVE ELF</kbd></blockquote>
+
+<p>and the command SORT 2 was given, the result would be that ITEM1=0, 
+and ITEM2=ELF.  In this way the SORT command can be used to work out 
+whether the player typed two known objects.</p>
+
+
+<h2><a id="section-5" name="section-5">5. Adlan Commands and Routines, Expressions and Conditions</a></h2>
+
+<p>This is the part of ADLAN which makes the adventure tick.  The commands form a routines which are compiled into machine code to form the finished adventure.  Each block of commands is enclosed in two braces (<code>{</code> and <code>}</code>).  The layout of the routines are not important as far as spaces and carriage returns are concerned, but if you follow the layout of the examples given here, you will find your routines easier to debug, and no less efficient in the final adventure.</p>
+
+<p>Each routine is a list of "commands".  Commands are words that tell ADLAN to do something at that point.  Perhaps the most used is the <a href="#command-PRINT">PRINT command</a>.</p>
+
+<blockquote><pre>PRINT &lt;Hello.&gt;</pre></blockquote>
+
+<p>displays the message "Hello." on the screen, but the command:</p>
+
+<blockquote><pre>PRINT $1</pre></blockquote>
+
+<p>displays message $1, which in our example adventure is "Ok"</p>
+
+<blockquote><pre>PRINT $ATTRIB sword</pre></blockquote>
+
+<p>would get the attribute of the sword, and display the message of that number.  "ATTRIB sword" is an example of an <a href="#section-5.2">"expression"</a> (sometimes abbreviated to "exp".)  An expression is a piece of program which has a number result.  It is with expressions that we do sums and test facts.</p>
+
+<p>Two special commands are IF and WHILE.  The <a href="#command-IF">IF command</a> tests an expression, and if it is true (non-zero) obeys the following block of commands.  eg:</p>
+
+<blockquote><pre>
+IF FIND paper AT carry
+{
+        PRINT &lt;You are carrying the paper.&gt;
+}
+</pre></blockquote>
+
+<p>IF can also be used with ELSE.  The block of commands after the ELSE is obeyed if the expression was false (zero).  eg:</p>
+
+<blockquote><pre>
+IF FIND paper AT carry
+{
+        PRINT &lt;You are carrying the paper.&gt;
+}
+ELSE
+{
+        PRINT &lt;You are not carrying the paper.&gt;
+}
+</pre></blockquote>
+
+<p>Of course, it is far more efficient to write:</p>
+
+<blockquote><pre>
+PRINT &lt;You are &gt;
+IF NOT FIND paper AT carry { PRINT &lt;not &gt; }
+PRINT &lt;carrying the paper.&gt;
+</pre></blockquote>
+
+<p>Variables are like pigeon-holes that can hold numbers.  In ADLAN they are accessed using the hash (<code>#</code>) symbol, followed by the variable number.  You decide how many variables you want to use in the OPTIONS section.  In addition to these, there will always be a variable numbered #0.  The parser puts the number of objects that the player typed into this variable just before it starts the AFTER routine.</p>
+
+<p>A full list of commands and expressions follows.</p>
+
+
+<h3><a id="section-5.1." name="section-5.1.">5.1. Commands</a></h3>
+
+
+<h4><code><a id="command-DESCRIBE" name="command-DESCRIBE">DESCRIBE</a></code></h4>
+
+<p>This command forces the description of the players location to be printed before the next BEFORE routine is executed.  From then on <a href="#exp-DESCRIBING">DESCRIBING (q.v.)</a> is true.</p>
+
+
+<h4><code><a id="command-DRAW" name="command-DRAW">DRAW</a></code></h4>
+
+<p>DRAW is similar to DESCRIBE, except that it ensures that the picture for the players location is drawn before the next BEFORE routine.  If there is no picture then DRAW is ignored.</p>
+
+
+<h4><code><a id="command-MOVE" name="command-MOVE">MOVE object FROM location_1 TO location_2</a></code></h4>
+
+<p>This command takes an object from location 1 and puts it at location 2.  If the object cannot be found at location 1 the command is ignored.  eg:</p>
+
+<blockquote><code>move rock from a1 to carry</code></blockquote>
+
+
+<h4><code><a id="command-PRINT" name="command-PRINT">PRINT string</a></code></h4>
+
+<p>This displays the string on the screen.</p>
+
+
+<h4><code>PRINT $exp</code></h4>
+
+<p>This displays message number of the expression on the screen.</p>
+
+
+<h4><code><a id="command-PRINTF" name="command-PRINTF">PRINTF filename_string</a></code></h4>
+
+<p>This highly useful command (intended mainly for disc use) will print the contents of a file.  The file should be in pure ASCII form.  The filename string should contain the name of the file to print, without spaces, control codes, or italic markers.  If an error occurs (eg disc missing) a message will be printed, but the adventure will not be terminated.  If you intend to use this command with the tape, you should remind the player not to stop the tape.  Also remember that the files can only then be printed in the order in which they were saved, and cannot practically be printed twice.  eg:</p>
+
+<blockquote><pre>printf &lt;extratxt.s01&gt;</pre></blockquote>
+
+
+<h4><code><a id="command-PICTURE" name="command-PICTURE">PICTURE filename_string</a></code></h4>
+
+<p>This command allows you to display pictures at any time during the adventure.  It is only really available to disc users, for the same reason as <a href="#command-PRINTF">PRINTF (q.v.)</a>.  The filename string should contain the name of the file to print, without spaces, control codes, or italic markers.  The filename specified is immediately de-compressed onto the screen, drawing the picture.  If an error occurs (eg disc missing) a message is printed, but the adventure continues. eg:</p>
+
+<blockquote><pre>picture &lt;zombie.csc&gt;</pre></blockquote>
+
+
+<h4><code>PICTURE KEY</code></h4>
+
+<p>After this command the adventure will wait for a key immediately after displaying a picture, and will then restore the screen back to its pre-picture state (apart from windows).  This is the normal state, ie unless PICTURE DESCRIBING is given, PICTURE KEY is assumed.</p>
+
+
+<h4><code>PICTURE DESCRIBING</code></h4>
+
+<p>After this command the adventure does not wait or restore the screen after displaying a picture.  This allows you to define a description window below a picture.  It is important to define windows in the DESCRIBING routine when using this option, so that the description appears in the right place.  These windows may also be defined in the OPTION string, using control codes.</p>
+
+
+<h4><code><a id="command-DONE" name="command-DONE">DONE</a></code></h4>
+
+<p>This command terminates the routine in which it is found.  eg. if encountered in the LOCAL AFTER routine, it forces the AFTER routine to be started.  It should be used instead of LOOP in the AFTER routine.  DONE cannot be used in the LOCAL BEFORE routine.</p>
+
+
+<h4><code><a id="command-LIST" name="command-LIST">LIST location</a></code></h4>
+
+<p>This command lists all the objects at the location, using their defined names.  It also adds on any status messages if the object has any.  Each object is displayed on a new line.</p>
+
+
+<h4><code><a id="command-MOVETO" name="command-MOVETO">MOVETO location</a></code></h4>
+
+<p>This command moves the player to the location.  It does not stop the routine like DONE, but from then on, HERE will be the same as the location specified.</p>
+
+
+<h4><code><a id="command-IF" name="command-IF">IF test_exp { "true" block }<br />
+IF test_exp { "true" block } ELSE { "false" block }</a></code></h4>
+
+<p>This important command allows testing of a fact, and then different actions depending on whether that fact is true.  For example:</p>
+
+<blockquote><pre>
+if count here
+{ print &lt;There are some objects here.&gt; }
+else
+{ print &lt;There are no objects here.&gt; }
+</pre></blockquote>
+
+<p>This could more efficiently be written:</p>
+
+<blockquote><pre>
+print &lt;There are &gt;
+if count here { print &lt;some&gt; } else { print &lt;no&gt; }
+print &lt; objects here.&gt;
+</pre></blockquote>
+
+
+<h4><code><a id="command-WHILE" name="command-WHILE">WHILE test_exp { block_repeated_if_true }</a></code></h4>
+
+<p>This command allows commands to be repeated many times.  For example, to move all the objects the player typed to limbo:</p>
+
+<blockquote><pre>
+while #0
+{ move item #0 from here to limbo
+  #0 = sub #0-1 }
+</pre></blockquote>
+
+
+<h4><code><a id="command-DISPLAY" name="command-DISPLAY">DISPLAY exp</a></code></h4>
+
+<p>This command displays the result of the expression.  For example:</p>
+
+<blockquote><code>display #0</code></blockquote>
+
+<p>displays the contents of variable 0.</p>
+
+
+<h4><code><a id="command-EXAMINE" name="command-EXAMINE">EXAMINE object</a></code></h4>
+
+<p>This command prints the description of the object.</p>
+
+
+<h4><code><a id="command-QUIT" name="command-QUIT">QUIT</a></code></h4>
+
+<p>This command stops the adventure completely and permanently.  It is important that you put it somewhere, so that you can test your adventure and then get back to editing the program.</p>
+
+
+<h4><code><a id="command-RESTART" name="command-RESTART">RESTART</a></code></h4>
+
+<p>This command start the adventure again, right from the beginning.</p>
+
+<!-- Are all changed links in the program restored?  It looks like it from reading the adlan3.sub restart and mem_load routines.  RB 1999-09-18 -->
+
+
+<h4><code><a id="command-CR" name="command-CR">CR</a></code></h4>
+
+<p>This command simply starts a new line on the screen.  It is neater and more efficient than a <code>PRINT &lt;\&gt;</code>.</p>
+
+
+<h4><code><a id="command-assign" name="command-assign">#exp = exp</a></code></h4>
+
+<p>This allows numbers to be put into variables.  For example:</p>
+
+<blockquote><code>#1 = add #0+4</code></blockquote>
+
+<p>puts the contents of variable 0 added with 4, into variable 1.  (Variable 0 usually holds the number of objects typed.)</p>
+
+<p>More complex ways of using variables can be found.  For example:</p>
+
+<blockquote><code>#sum #1+10 = item #1</code></blockquote>
+
+<p>This is called "indirection" and can be used to implement arrays in ADLAN.</p>
+
+
+<h4><code><a id="command-ATTRIB" name="command-ATTRIB">ATTRIB object = exp</a></code></h4>
+
+<p>This allows the attribute of an object to be changed.  For example, to add one to the attribute of the rock:</p>
+
+<blockquote><code>attrib rock = add attrib rock+1</code></blockquote>
+
+
+<h4><code><a id="command-SP" name="command-SP">SP</a></code></h4>
+
+<p>This command simply prints a space.  It is neater and more efficient than <code>print &lt; &gt;</code>.</p>
+
+
+<h4><code><a id="command-MAKE" name="command-MAKE">MAKE object status_letters</a></code></h4>
+
+<p>This command adds the letters to an objects status.  If BERT was status H for example, and the command:</p>
+
+<blockquote><code>make bert PKA</code></blockquote>
+
+<p>was issued, BERT's status would then be HPKA.  A letter that is added twice will only feature once in the status of an object.</p>
+
+<h4><code><a id="command-UNMAKE" name="command-UNMAKE">UNMAKE object status_letters</a></code></h4>
+
+<p>This command removes status letters from an objects status.  If a rock was status HL, the command:</p>
+
+<blockquote><code>unmake rock LO</code></blockquote>
+
+<p>would result in the rock's status being just H.  The letter O was not removed because it was not there to begin with.</p>
+
+
+<h4><code><a id="command-KEY" name="command-KEY">KEY</a></code></h4>
+
+<p>This command simply waits for a key to be pressed.  It does not accept keys that were typed before the command was reached, eg during printing.</p>
+
+
+<h4><code><a id="command-LOOP" name="command-LOOP">LOOP</a></code></h4>
+
+<p>The pattern of the adventure is as follows:</p>
+
+<ol>
+
+<li>Display picture for location if DRAW has been used, or first time at location.</li>
+
+<li>Execute DESCRIPTION code, if DESCRIBING is true</li>
+
+<li>Print description if DESCRIBING is true</li>
+
+<li>Do LOCAL BEFORE routine</li>
+
+<li>Do BEFORE routine</li>
+
+<li>Wait for commands from player</li>
+
+<li>Parse the commands for known words</li>
+
+<li>Check for direction verbs</li>
+
+<li>Do LOCAL AFTER routine</li>
+
+<li>Do AFTER routine</li>
+
+<li>Go back to step 1</li>
+
+</ol>
+
+<p>The <a href="#command-LOOP">LOOP command</a> causes the flow to go back to step 1 immediately.</p>
+
+
+<h4><code><a id="command-LINK" name="command-LINK">LINK direction FROM location_1 TO location_2</a></code></h4>
+
+<p>This command fills in one of the links from a location.  For example, if a location was defined as:</p>
+
+<blockquote><code>A1, - - X23 -,</code> ...</blockquote>
+
+<p>and the command:</p>
+
+<blockquote><code>link north from A1 to B99</code></blockquote>
+
+<p>was used, A1 would then be the same as:</p>
+
+<blockquote>
+<code>A1, B99 - X23 -,</code> ...
+</blockquote>
+
+<p>Location 2 can also be a dash, if no link is to be made.  So if the command:</p>
+
+<blockquote>
+<code>link east from A1 to -</code>
+</blockquote>
+
+<p>was used, A1 would then be:</p>
+
+<blockquote>
+<code>A1, B99 - - -,</code> ...
+</blockquote>
+
+<p>If you define the direction verbs as other than north, south, east and west, you must use your verbs in the link command.  For example:</p>
+
+<blockquote>
+<code>link starboard from A1 to X23</code>
+</blockquote>
+
+
+<h4><code><a id="command-SWAP" name="command-SWAP">SWAP object_1 AND object_2</a></code></h4>
+
+<p>This command swaps the numbers assigned to the objects, so that their noun names are swapped.  <em>Their positions are not swapped</em>.</p>
+
+
+<h4><code><a id="command-SAVE" name="command-SAVE">SAVE</a></code></h4>
+
+<p>This command will save the game position on cassette or disc, and will also <a href="#command-QUICKSAVE">QUICKSAVE</a> it (q.v.).  The name of the file to be saved must be typed by the player first, but no message is printed before this.  Therefore you should use the command is a way similar to this:</p>
+
+<blockquote>
+<code>print &lt;Type name for game position:&gt; save</code>
+</blockquote>
+
+<p>If an error occurs during saving, a message will be printed, but the adventure will continue.</p>
+
+
+<h4><code><a id="command-LOAD" name="command-LOAD">LOAD</a></code></h4>
+
+<p>This command loads a previously saved game position.  The name is required as in the <a href="#command-SAVE">SAVE command</a>, but again, no prompt is made.  Use the command like this:</p>
+
+<blockquote>
+<code>print &lt;Name of saved position?&gt; load</code></blockquote>
+
+<p>Like the <a href="#command-SAVE">SAVE command</a>, the adventure is not terminated if an error occurs.  The <a href="#command-LOAD">LOAD command</a> will accept files created with the <a href="#command-SAVE">SAVE command</a> in a different adventure, but the information will probably make the game unplayable.  As a side effect, the position loaded is also <a href="#command-QUICKSAVE">QUICKSAVED</a> (q.v.).</p>
+
+
+<h4><code><a id="command-QUICKSAVE" name="command-QUICKSAVE">QUICKSAVE</a></code></h4>
+
+<p>This command works like save, but instead of saving the position on disc, it is stored in memory.  It can then be reloaded with the <a href="#command-QUICKLOAD">QUICKLOAD command</a>.  The <a href="#command-QUICKSAVE">QUICKSAVE command</a> required space in memory, and so will generate an error if there is not enough room.  There is usually more room left over in a saved adventure than when ADLAN is still in memory.</p>
+
+<h4><code><a id="command-QUICKLOAD" name="command-QUICKLOAD">QUICKLOAD</a></code></h4>
+
+<p>QUICKLOAD restores the game position to where it was when the last QUICKSAVE was used.  If you are going to allow the player to use these commands, it is important to do a QUICKSAVE when your first start the adventure, so that a QUICKLOAD has something to get hold of if the player uses QUICKLOAD before he has QUICKSAVEd.  For example:</p>
+
+<blockquote><pre>
+WORDS
+        ...
+        qsave; oops;
+ENDWORDS
+        ...
+(At the start location)
+S, - - - -, , &lt;...&gt;,
+{
+        if not been here { quicksave }
+},{}
+...
+if typed qsave { quicksave print &lt;Ok.&gt; done }
+if typed oops { quickload describe done }
+</pre></blockquote>
+
+
+<h4><code><a id="command-EXITS" name="command-EXITS">EXITS north_string south_string east_string west_string none_string</a></code></h4>
+
+<p>This command will print the strings only if their link goes somewhere.  (NB your adventure may not use north, south etc.  The strings are in the same order as the verbs.) For example, if you were at a location:</p>
+
+<blockquote>
+<code>X1, - p32 u84 -,</code> ...
+</blockquote>
+
+<p>and these commands were issued:</p>
+
+<blockquote><pre>
+print &lt;Obvious exits&gt;
+exits &lt;, north&gt; &lt;, south&gt; &lt;, east&gt; &lt;, west&gt; &lt; none&gt;
+</pre></blockquote>
+
+<p>then the following would be displayed:</p>
+
+<blockquote>
+<samp>Obvious exits, south, east</samp>
+</blockquote>
+
+<p>If there are NO exits, the "none" string is printed.  So for a location:</p>
+
+<blockquote>
+<code>X1, - - - -,</code> ...
+</blockquote>
+
+<p>the following is displayed:</p>
+
+
+<blockquote>
+<samp>Obvious exits none</samp>
+</blockquote>
+
+<p>If you are careful with your control codes you can make this read better.  eg.</p>
+
+<blockquote><pre>
+print &lt;Obvious exits&gt;
+exits &lt;, north&gt; &lt;, south&gt; &lt;, east&gt; &lt;, west&gt; &lt;^MNo obvious exits.&gt;
+</pre></blockquote>
+
+<p>would overwrite the "Obvious exits" with "No obvious exits" if there were none.</p>
+
+
+<h4><code><a id="command-INK" name="command-INK">INK ink_number colour<br />
+INK ink_number first_colour second_colour</a><br />
+<a id="command-BORDER" name="command-BORDER">BORDER colour<br />
+BORDER first_colour second_colour</a></code></h4>
+
+<p>This command sets the ink specified to a certain colour.  Anything on the screen displayed using that ink will then be in the colour specified.  Used in its second form, the command will make the ink flash alternately from the first colour to the second colour.  In mode 2 only inks 0 and 1 are available.  In mode 1 inks 0 through 3 are available.  The <a href="#command-BORDER">BORDER command</a> is the same as the ink command, but changes the colour of the border of the screen.  The colours are as follows:</p>
+
+<ul>
+<li>BLACK</li>
+<li>BLUE</li>
+<li>BRIGHTBLUE</li>
+<li>BRIGHTCYAN</li>
+<li>BRIGHTGREEN</li>
+<li>BRIGHTMAGENTA</li>
+<li>BRIGHTRED</li>
+<li>BRIGHTWHITE</li>
+<li>BRIGHTYELLOW</li>
+<li>CYAN</li>
+<li>GREEN</li>
+<li>LIMEGREEN</li>
+<li>MAGENTA</li>
+<li>MAUVE</li>
+<li>ORANGE</li>
+<li>PASTELBLUE</li>
+<li>PASTELCYAN</li>
+<li>PASTELGREEN</li>
+<li>PASTELMAGENTA</li>
+<li>PASTELYELLOW</li>
+<li>PINK</li>
+<li>PURPLE</li>
+<li>RED</li>
+<li>SEAGREEN</li>
+<li>SKYBLUE</li>
+<li>WHITE</li>
+<li>YELLOW</li>
+</ul>
+
+<p>For example:</p>
+
+<blockquote><pre>
+ink 1 pastelyellow
+ink 2 red orange
+ink add 1+#3 blue
+border red
+</pre></blockquote>
+        
+<h4><code><a id="command-PEN" name="command-PEN">PEN ink_number</a><br />
+<a id="command-PAPER" name="command-PAPER">PAPER ink_number</a></code></h4>
+
+<p>The first of these commands sets the pen colour (ie that of any letters printed) to the ink number given (see above).  The second sets the paper colour (ie the colour on which the letters are printed) to the ink number given.  The same effect can be accomplished with control codes.  For example:</p>
+
+<blockquote><pre>
+pen 1 paper 0
+print &lt;Hello&gt;
+</pre></blockquote>
+
+<p>or</p>
+
+<blockquote><pre>
+print &lt;^O1^I0Hello&gt;
+</pre></blockquote>
+        
+
+<h4><code><a id="command-WINDOW" name="command-WINDOW">WINDOW stream top_limit bottom_limit left_limit right_limit</a></code></h4>
+
+<p>The window command, used in conjunction with the <a id="command-STREAM" name="command-STREAM">STREAM command</a>, or "escape" control code (<a href="#section-9">see chapter 9</a>) allows the screen to be divided into windows, each with its own text.  A window is like a sub-screen.  The limits are the first and last column and row which the window occupies on the screen.  The first column is numbered 1, the first line is also numbered 1.  For example, to define a window in mode 2 which covers the top-left quarter of the screen:</p>
+
+<blockquote>
+<code>window 5 1 13 1 40</code>
+</blockquote>
+
+<p>And to print the message "hello" in the window:</p>
+
+<blockquote><pre>
+stream 5
+print &lt;hello&gt;
+</pre></blockquote>
+
+<p>or</p>
+
+<blockquote><pre>
+print &lt;^[5hello&gt;
+</pre> 
+</blockquote>
+
+<p>There are eight streams available, numbered zero to seven.  They normally cover the whole screen.</p>
+
+<!-- That is to say, you should make them do so.  I'm not sure they do automatically.  RB 1999-09-18 -->
+
+
+<h4><code><a id="command-CLEAR" name="command-CLEAR">CLEAR</a></code></h4>
+
+<p>This command clears the window of the current stream.  This is usually the whole screen unless a <a href="#command-WINDOW">WINDOW command</a> has been used.</p>
+
+
+<h4><code><a id="command-LOCATE" name="command-LOCATE">LOCATE column row</a></code></h4>
+
+<p>This command moves the cursor to the position given in the current window (the top-left hand corner of the window is column 1, row 1).  For example:</p>
+
+<blockquote><pre>
+locate 5 2
+print &lt;hello&gt;
+</pre></blockquote>
+
+<p>or</p>
+
+<blockquote><pre>
+print &lt;^_^E^Bhello&gt;
+</pre></blockquote>
+
+<h4><code><a id="command-FORMAT" name="command-FORMAT">FORMAT<br />
+FORMAT NOT</a></code></h4>
+
+<p>After the <a href="#command-FORMAT">FORMAT command</a> is issued, all strings will be automatically formatted by ADLAN, i.e. any word which would otherwise wrap at the edge of the screen (and so be split into two parts) is placed on a new line.  In order for this to work properly, the strings should contain only one space between words, and contain no carriage returns or new lines.  The <a href="#command-FORMAT">FORMAT NOT command</a> cancels this effect.  Formatting is most useful when used with windows, when hand-formatting, or formatting by a word processor can be more difficult.  Hand-formatting or word processor formatting is to be recommended above automatic formatting, because the results are usually much neater.</p>
+
+
+<h4><code><a id="command-CALL" name="command-CALL">CALL address</a><br />
+<a id="command-CALLMC" name="command-CALLMC">CALLMC offset_address</a></code></h4>
+
+<p>The first command transfers control to the machine code routine at the address given.  The second adds the offset address to the address of the machine code buffer reserved in the OPTIONS section of the adventure (<a href="#command-LOADMC">see also LOADMC</a>).  If no such buffer has been reserved, the second command acts identically to the first.  Both commands pass the following parameters to the routine:</p>
+
+<dl>
+<dt>IX register</dt>
+<dd>address of variable #0</dd>
+<dt>IX+2</dt>
+<dd>address of variable #1 etc.</dd>
+<dt>DE register</dt>
+<dd>address of a 2048 byte (2K) buffer</dd>
+</dl>
+
+<p>The variables can be read or altered by the routine, and the buffer may be used for any purpose (though primarily it is supplied for use as a file buffer).  The routine may corrupt all registers except F' and BC' (consult firmware manual for details).</p>
+
+<h4><code><a id="command-LOADMC" name="command-LOADMC">LOADMC filename</a></code></h4>
+
+<p>This command loads the binary file named into the machine code buffer reserved in the OPTIONS section of the adventure (<a href="#command-CALLMC">see also CALLMC</a>).  An error is generated if the file is too long for the buffer, or if it not a binary file.  The error will cause the adventure to be terminated.  This command allows creation of machine code routines using an assembler (for example, MAXAM) which can then by called using the <a href="#command-CALLMC">CALLMC command</a>.  These can perform special functions which ADLAN does not provide (for example, sound).</p>
+
+
+<h3><a id="section-5.2" name="section-5.2">5.2. Expressions</a></h3>
+
+<p>Expressions are like commands, but always have a result.  You could imagine the results as being passed to the left.</p>
+
+<h4><code><a id="exp-EQUAL" name="exp-EQUAL">EQUAL exp_1 = exp_2</a></code></h4>
+
+<p>Gives a true result only if exp_1=exp_2.  It can be used with objects, for example:</p>
+
+<blockquote><pre>
+if equal item 1=plant
+{ Print &lt;What plant?&gt; }
+</pre></blockquote>
+
+<h4><code><a id="exp-AT" name="exp-AT">AT location</a></code></h4>
+
+<p>If the player is currently at the location specified, the result is true.  For example:</p>
+
+<blockquote><pre>
+if at a1
+{ Print &lt;You are at location A1.&gt; }
+</pre></blockquote>
+
+<h4><code><a id="exp-AREA" name="exp-AREA">AREA location</a></code></h4>
+
+<p>This gives a true result if the player is at a location which has the same letter in it's code as the location given.  It is useful for giving help messages, and for semi-local routines, such as rocks falling on the players head only in caves.  For example:</p>
+
+<blockquote><pre>
+if area c       (true if player is in one of c0...c255)
+{       print &lt;You are in area C&gt; }
+</pre></blockquote>
+
+<h4><code><a id="exp-NOT" name="exp-NOT">NOT exp</a></code></h4>
+
+<p>If the expression has a true result, the result of NOT is false, otherwise it is true.  For example:</p>
+
+<blockquote><pre>
+if not equal #0=#1
+{ Print &lt;They are not equal.&gt; }
+</pre></blockquote>
+
+<h4><code><a id="exp-FIND" name="exp-FIND">FIND object AT location<br />
+FIND object AT loc1 / loc2...</a></code></h4>
+
+<p>If the object is at the location (or any one of the locations, if a list is given), the result of FIND is true.  For example:</p>
+
+<blockquote><pre>
+if not find rock at here
+{ Print &lt;I can't see the rock here.&gt; }
+</pre></blockquote>
+
+<h4><code><a id="exp-EITHER" name="exp-EITHER">EITHER exp_1 OR exp_2</a></code></h4>
+
+<p>If either exp 1 in true or exp 2 is true, the result of EITHER is true.  For example:</p>
+
+<blockquote><pre>
+if either typed up or typed climb
+{ moveto d99 done }
+</pre></blockquote>
+
+<h4><code><a id="exp-BOTH" name="exp-BOTH">BOTH exp_1 AND exp_2</a></code></h4>
+
+<p>If both exp 1 and exp 2 have true results, the result of BOTH is true.  For example:</p>
+
+<blockquote><pre>
+if both equal item 1=rock and equal item 2=tree
+{ ...
+</pre></blockquote>
+
+<p>causes the same response to TAKE as to PICK UP.  For this to work, TAKE, PICK and UP must be separate words, not alternative spellings of the same word.</p>
+
+
+<h4><code><a id="exp-TYPED" name="exp-TYPED">TYPED word</a></code></h4>
+
+<p>If the word was typed, the result is true.</p>
+
+<h4><code>TYPED [ word_group_1 / word_group_2 / ...etc ]</code></h4>
+
+<p>If any of the word groups listed was typed, the result is true.  A word group is a list of words, separated by spaces; or a single word.</p>
+
+
+<h4><code><a id="exp-ADD" name="exp-ADD">ADD exp_1 + exp_2</a></code></h4>
+
+<p>The result is the sum of exp 1 and exp 2.</p>
+
+
+<h4><code><a id="exp-SUB" name="exp-SUB">SUB exp_1 - exp_2</a></code></h4>
+
+<p>The result is that of the subtraction, exp 1 - exp 2.</p>
+
+
+<h4><code><a id="exp-ITEM" name="exp-ITEM">ITEM exp</a></code></h4>
+
+<p>This can be used in place of an object to indicate a typed object (<a href="#section-4">see chapter 4</a>).  A number is automatically selected for each object when it is created, and is subsequently used by ADLAN to identify it.  The programmer need never worry about object numbers, but it might be useful to know that they can be put in variables.  eg. <code>#4=rock move #4 from a2 to a4</code>)</p>
+
+
+<h4><code><a id="exp-FIRSTAT" name="exp-FIRSTAT">FIRSTAT location_code</a></code></h4>
+
+<p>Like ITEM this can be used wherever an object could be used.  The result of FIRSTAT is the first object in the list of objects at the location.  If there are no objects at the location, the result of FIRSTAT is zero.  It can be used to move all objects in a location, for example:</p>
+
+<blockquote><pre>
+while count here { move firstat here to carry }
+</pre></blockquote>
+
+
+<h4><code><a id="exp-COUNT" name="exp-COUNT">COUNT location</a></code></h4>
+
+<p>The result of COUNT is the number of objects at the location.  For example:</p>
+
+<blockquote><pre>
+if not count here
+{ print &lt;There's nothing here!&gt; }
+</pre></blockquote>
+
+
+<h4><code><a id="exp-KEY" name="exp-KEY">KEY</a></code></h4>
+
+<p>This waits for a key to be pressed (like the <a href="#command-KEY">KEY command</a>), and then has the ASCII code for the key for a result.The ASCII code is always converted into a capital letter.  (See computer manual for ASCII codes.)</p>
+
+<h4><code><a id="exp-YESNO" name="exp-YESNO">YESNO</a></code></h4>
+
+<p>This waits for either the "Y" or "N" key to be pressed.  If N is pressed, the result is zero, otherwise it is one.  For example:</p>
+
+<blockquote><pre>
+print &lt;Are you sure you want to quit? (Y/N)&gt;
+if yesno {quit}
+</pre></blockquote>
+
+
+<h4><code><a id="exp-DESCRIBING" name="exp-DESCRIBING">DESCRIBING</a></code></h4>
+
+<p>In a BEFORE routine, DESCRIBING is one if a description has just been printed, otherwise it is zero.  In an AFTER routine, DESCRIBING is one if a <a href="#command-DESCRIBE">DESCRIBE command</a> has been met, otherwise it is zero.</p>
+
+
+<h4><code>#exp</code></h4>
+
+<p>The result is the contents of variable whose number is the expression.</p>
+
+
+<h4><code><a id="exp-ATTRIB" name="exp-ATTRIB">ATTRIB object</a></code></h4>
+
+<p>The result is the value of the attribute of the object.</p>
+
+
+<h4><code><a id="exp-STATUS" name="exp-STATUS">STATUS object IS status_letters</a></code></h4>
+
+<p>The result is true if ANY of the status letters specified is in the list of letters for the object.  For example:</p>
+
+<blockquote><pre>
+if status sword is ABC
+{ This block executed if the status contains A, B or C }
+
+if both status sword is A and
+   both status sword is B and status sword is C
+{ This will be done if the status contains A, B and C }
+</pre></blockquote>
+
+<h4><code><a id="exp-RANDOM" name="exp-RANDOM">RANDOM exp</a></code></h4>
+
+<p>The result is a random number between zero and the expression-1.  For example:</p>
+
+<blockquote><pre>
+#2=random 10
+</pre></blockquote>
+
+<p>Puts a random number between zero and nine into variable #2.</p>
+
+
+<h4><code><a id="exp-GREATER" name="exp-GREATER">GREATER exp_1 THAN exp_2</a></code></h4>
+
+<p>If exp 1 is greater than exp 2 then result of GREATER is true.</p>
+
+
+<h4><code><a id="exp-BEEN" name="exp-BEEN">BEEN location</a></code></h4>
+
+<p>If the player has been at the location before, the result is one, otherwise it is zero.  This is extremely useful for first-time descriptions and events, and for scoring.  For example, to score:</p>
+
+<blockquote><pre>
+BEFORE
+{
+        if not been here { #1=#1+10 }
+</pre></blockquote>
+
+<p>This gives 10 points in variable #1 for visiting a new location.</p>
+
+
+<h2><a id="section-6" name="section-6">6. The START, DESCRIBING, BEFORE and AFTER routines</a></h2>
+
+
+<p>The "flow of control" in ADLAN follows this pattern:</p>
+
+<ol>
+
+<li>Display any picture for location if DRAW has been used, or if the player has not been here.</li>
+
+<li>Execute DESCRIBING routine, if DESCRIBING is true</li>
+
+<li>Print description if DESCRIBING is true</li>
+
+<li>Do LOCAL BEFORE routine</li>
+
+<li>Do BEFORE routine</li>
+
+<li>Wait for commands from player</li>
+
+<li>Parse the commands for known words</li>
+
+<li>Check for direction verbs</li>
+
+<li>Do LOCAL AFTER routine</li>
+
+<li>Do AFTER routine</li>
+
+<li>Go back to step 1</li>
+
+</ol>
+
+<p>The START routine is executed only once, at the start of the adventure.  It is usually used for setting up inks, windows and for title-screens and instructions.</p>
+
+<p>The DESCRIPTION code is executed just before printing the description of a location, and so is used mostly to set up windows when the PICTURE DESCRIBING option is being used.  (<a href="#section-5">see chapter 5</a>)</p>
+
+<p>The use of the BEFORE and AFTER routines, both LOCAL and global, must be carefully thought out.  If you want a rock to fall on the player's head when he enters a certain location, you put the routine to do this in the LOCAL BEFORE routine for that location.  For example:</p>
+
+
+<blockquote><pre>
+        P15, - - X23 B52, ,&lt;A rocky cave.&gt;,
+{
+        if not been here
+        {
+                print &lt;A rock falls on your head.&gt;
+        }
+},{};
+</pre></blockquote>
+
+<p>However, if you want a rock to fall on the player's head at random intervals, wherever they are, you must write this into the BEFORE routine.  For example:</p>
+
+<blockquote><pre>
+BEFORE
+{
+        if greater random 100 than 95
+        {
+                print &lt;A rock falls on your head.&gt;
+        }
+</pre>
+...
+</blockquote>
+
+<p>Note that RANDOM 100 is used to give a 5% chance of a rock falling.</p>
+
+<p>The consequences of actions by the player usually come in the AFTER routine.  If you want to add extra directions, such as UP or DOWN, these could be put in the LOCAL AFTER routine.  For example:</p>
+
+
+<blockquote><pre>
+        U40, - Z255 X23 J90, ,&lt;Another rocky cave.&gt;,{},
+{
+        if typed up
+        {       moveto G1 describe loop }
+};
+</pre></blockquote>
+
+<p>Note that if you are using PICK UP in your game, you must check that the player did not type PICK to avoid confusion.  The routine must then be:</p>
+
+
+<blockquote><pre>
+        U40, - Z255 X23 J90, ,&lt;Another rocky cave.&gt;,{},
+{
+        if both typed up and not typed pick
+        {       moveto G1 describe loop }
+};
+</pre></blockquote>
+
+<p>Verbs that work everywhere should be put into the normal AFTER routine.</p>
+
+
+<h3><a id="section-6.1." name="section-6.1.">6.1. Our example adventure: the routines</a></h3>
+
+<p>The START routine in our example is very short.  It simply sets some ink colours and displays a message.</p>
+
+<pre>
+START
+{
+        ink 0 blue
+        ink 1 brightwhite
+
+        print &lt;^L
+
+                   WELCOME TO THE EXAMPLE ADVENTURE
+
+           All that you have to do is escape from the cave!
+
+
+                       Press any key to begin.&gt;
+
+        key
+}
+</pre>
+
+<p>The DESCRIPTION routine appears next.  Our example adventure does not have a DESCRIPTION routine.  Here is an example routine, however.  It sets up a window for the description to be printed in.</p>
+
+<pre>
+DESCRIPTION
+{
+        window 0 1 80 20 25
+        (NB this command will also switch to stream 0)
+}
+</pre>
+
+<p>The BEFORE routine should also list out the objects at a location (if you wish it to do so) as well as possible directions to go in.  The commands to do this should also check if a description has just been printed, otherwise the list of objects here would appear before every time the player entered a command.  The print command at the end of the routine prints and inverse star on the screen.  This is the player's prompt and tells them that the parser is waiting for a command.  So, here is our BEFORE routine.</p>
+
+<pre>
+BEFORE
+{
+        if describing
+        {
+                print &lt;\\Obvious exits:&gt;
+                exits &lt; N&gt; &lt; S&gt; &lt; E&gt; &lt; W&gt; &lt; none&gt;
+                cr
+                if count here
+                {
+                        print &lt;\You can also see:\&gt;
+                        list here
+                }
+        }
+        print &lt;\^P^X*^X&gt;
+}
+</pre>
+
+<p>The final <a href="#command-PRINT">PRINT command</a> displays an inverse star as a prompt to the player.</p>
+
+<p>The AFTER routine is concerned mainly with interpreting the players commands, and dealing with the consequences.  Notes are given to clarify certain points.</p>
+
+<pre>
+AFTER
+{
+        if typed stop { quit }
+</pre>
+
+<p>(It's important that you use quit somewhere, so that you can get out of the adventure)</p>
+
+<pre>
+        if typed [examine/look at]
+        {
+                if find item 1 at here/carry
+                {
+                        examine item 1 done
+                }
+                print $2 done
+        }
+</pre>
+
+<p>(Note the use of FIND with more than one location listed, and also the 
+use of the <a href="#exp-TYPED">TYPED command</a> with word groups to give LOOK AT a different 
+meaning from LOOK.)</p>
+
+<pre>
+        if typed look { describe done }
+
+        if typed inventory
+        {
+                if count carry
+                {
+                        print &lt;You are carrying:\&gt;
+                        list carry done
+                }
+                print &lt;You aren't carrying anything.&gt; done
+        }
+
+        if typed [take/pick up]
+        {
+                if find item 1 at carry
+                {
+                        print &lt;You've already got that.&gt; done
+                }
+                if not find item 1 at here
+                {
+                        print $2 done
+                }
+                if status item 1 is I
+                {
+                        print &lt;You can't take that.&gt; done
+                }
+                move item 1 from here to carry
+                print $1 done
+        }
+</pre>
+
+<p>(Take and drop often end up being the largest routines, since so many 
+things must be checked for.  eg. wearable objects must be "unworn" 
+before dropping)</p>
+
+<pre>
+        if typed [ drop / put down ]
+        {
+                if not find item 1 at carry
+                {
+                        print $3 done
+                }
+                move item 1 from carry to here
+                print $1 done
+        }
+
+        if typed fill
+        {
+                if not find item 1 at carry
+                {
+                        print $3 done
+                }
+                if both not equal item 1=bottle and item 1
+                {
+                        print &lt;You can't fill that.&gt; done
+                }
+                if at p2
+                {
+                        unmake bottle W         (empty out any water)
+                        make bottle O           (fill with oil)
+                        print $1 done
+                }
+                if at a1
+                {
+                        unmake bottle O         (empty out oil)
+                        make bottle W           (fill with water)
+                        print $1 done
+                }
+                print &lt;I can't fill the bottle here.&gt; done
+        }
+
+        if typed oil
+        {
+                if not find item 1 at here
+                {
+                        print $2 done
+                }
+                if not both find bottle at carry and status bottle is O
+                {
+                        print &lt;You don't have a suitable lubricant.&gt; done
+                }
+                if equal item 1 = gate
+                {
+                        print &lt;You oil the gate and can push it open a little.&gt;
+                        unmake bottle O         (empty the bottle)
+                        unmake gate C           (open the gate)
+                        link east from r2 to a1 (allow player to go through)
+                        done
+                }
+                if equal item 1 = plant
+                {
+                        print &lt;"Yuch" says the plant, shaking the oil of it's leaves.&gt;
+                        unmake bottle O
+                        done
+                }
+                print $4 done
+        }
+
+        if typed water
+        {
+                if not find item 1 at here
+                {
+                        print $2 done
+                }
+                if not both find bottle at carry and status bottle is W
+                {
+                        print &lt;You don't have any water.&gt; done
+                }
+                if equal item 1 = gate
+                {
+                        print &lt;The gate gets even more rusty!&gt;
+                        unmake bottle W         (empty the bottle)
+                        done
+                }
+                if equal item 1 = plant
+                {
+                        print &lt;&lt;
+The plant spurts into furious growth, climbing up and up until it 
+reaches the hole in the wall.&gt;
+                        unmake bottle W         (empty the bottle)
+                        unmake plant S
+                        make plant T            (make the plant tall)
+                        done
+                }
+                print $4 done
+        }
+
+        print &lt;I don't understand.&gt;
+}
+</pre>
+
+<p>("I don't understand" is the standard reply which will be printed if 
+none of the routines above was activated.)</p>
+
+
+<h2><a id="section-7" name="section-7">7. Creating Graphics for Adventures</a></h2>
+
+
+<p>To create the graphics you will need to use some sort of graphic design program, such as AMSOFT's Screen Designer.The screens you create should be saved onto disc in binary form.  ie The type of screen that can be displayed with the <a href="#command-LOAD">LOAD command</a> in BASIC.  The manual supplied with your graphics program should tell you how to do this.  You should avoid random stippling (spray) effects if possible, since these increase the size of the compressed screen slightly.  Regular patterns and shaded fills will compress perfectly well.</p>
+
+<p>ADLAN uses screens in a special compressed format.  This can reduce average screens to only 2K and very complex screens to 6K, allowing many pictures to be stored on one disc.  To compress your screens to ADLAN format enter the following BASIC program:</p>
+
+<blockquote><pre>
+100 file$="RUSTGATE.CSC"        'Filename for compressed screen
+110 Insert the program to load the screen here. The simplest
+120 form will be LOAD"screen".
+200 REM Reserve space for a file buffer.
+210 MEMORY &amp;1FFF
+220 REM Wait for keypress while destination disc is inserted
+230 WHILE INKEY$="": WEND
+240 REM Compress the screen onto the disc.
+250 |COMPRESS,@file$,&amp;2000
+260 MODE 2
+270 END
+</pre></blockquote>
+
+<p>Replace the filename in line 100 of the program with the filename that you require.  The extension .CSC (for Compressed SCreen) is recommended on compressed screen files.  The compressing process also stores all colours, mode and flash speeds which are set up by the program at lines 110 onwards.</p>
+
+<p>This program is to be found on the ADLAN disc, under the filename COMPRESS.BAS.  A program for converting Rainbird's Advanced Art Studio screens is also supplied, under the name CONVERT.BAS.</p>
+
+<p>The graphics are included into the adventure in two ways.  They can be associated with a particular location, or displayed by a command.  When a screen goes with a location, the filename of the screen is included in the PLACES section of the program, thus:</p>
+
+<blockquote><pre>
+U40, - Z2 X1 J0,, PICTURE &lt;rustgate.csc&gt;,
+        &lt;Another rocky cave.&gt;,
+        {},{};
+</pre></blockquote>
+
+<p>The picture will be displayed if either the player has not been to the location before, or if the <a href="#command-DRAW">DRAW command</a> is used (<a href="#section-5">see chapter 5</a>).</p>
+
+<p>Pictures can be displayed at any time by using the <a href="#command-PICTURE">PICTURE command</a>.  For example:</p>
+
+<blockquote><pre>
+if typed [eat beans]
+{
+        print &lt;You eat the hallucinogenic beans... (Press a key)&gt;
+        key
+        picture &lt;halucina.csc&gt;
+        done
+}
+</pre></blockquote>
+
+
+<h2><a id="section-8" name="section-8">8. Special Character Sets</a></h2>
+
+<p>ADLAN is designed so that you may use special character sets in your adventure.  If you want to use special lettering there are two ways you can do it.</p>
+
+<p>The first is to redefine the normal characters.  The characters will remain in memory, and will be saved with the adventure when the S option is used at the end of a compilation.  When the adventure is run the characters will be re-loaded.</p>
+
+<p>The second method is more complex.  You can have two sets of lettering in memory at once.  The first is defined over the normal lettering (or not defined at all).  The second is places on the characters which are numbered above 128.  The ASCII code for the letter "A" is 65.  To use the second character set, redefine the character 65+128 to the alternative form of the letter "A".  This is called the italic form, although it could be a special rune, or something.  The italic form will be used whenever a tilde (<code>~</code>) is met in a string.  After the tilde, italics are used until another tilde is met.  (PROTEXT users may use the printer control code for italics, <kbd>[CTRL-X][I]</kbd>, instead.  This will not muck up the formatting.) For example, the command:</p>
+
+<blockquote>
+<code>PRINT &lt;The scroll says ~Hi. I'm a scroll~ on it.&gt;</code>
+</blockquote>
+
+<p>might display:</p>
+
+<blockquote>The scroll says <i>Hi. I'm a scroll</i> on it.</blockquote>
+
+<p>Note that whenever a string starts, it starts in normal characters.  If you forget to turn italics off in a string, they will automatically be turned off at the end.</p>
+
+<p>This allows the use of occasional special lettering, or special symbols.  For full details of how to create symbols see the Amstrad computer manual.  If you have a symbol generator program, all the better.</p>
+
+<p>Some example symbol files are supplied with your disc or tape.  See <a href="#section-11">chapter 11</a> for details.</p>
+
+
+<h2><a id="section-9" name="section-9">9. Strings</a></h2>
+
+<p>Strings form the backbone of any adventure, and ADLAN has special facilities for dealing with them.  All strings in ADLAN are compressed.  In addition, any control code can be used in a string by using the form ^letter.  The upward arrow (^) indicates a control code, the letter defines which.  On the Amstrad CPCs the codes run as follows:</p>
+
+<dl compact="compact">
+
+<dt><code>^A</code></dt>
+
+<dd>Forces the symbol for the following control code to be printed, so <code>^A^L</code> would display a christmas tree.  See the Amstrad manual for details of these symbols.</dd>
+
+<dt><code>^B</code></dt>
+
+<dd>Turns off the cursor.  The cursor is automatic under ADLAN, there is no need to use this code.</dd>
+
+<dt><code>^C</code></dt>
+
+<dd>Turns on the cursor.  See ^B.</dd>
+
+<dt><code>^D</code></dt>
+
+<dd>Sets the screen mode.  <code>^D1</code> sets mode 1.  <code>^D2</code> sets mode 2.</dd>
+
+<dt><code>^E</code></dt>
+
+<dd>Sends next char to graphics cursor.  Not used with ADLAN.</dd>
+
+<dt><code>^F</code></dt>
+
+<dd>Enable characters to be sent to the screen.  Cancels <code>^U</code>.</dd>
+
+<dt><code>^G</code></dt>
+
+<dd>Makes the computer beep.</dd>
+
+<dt><code>^H</code></dt>
+
+<dd>Moves the cursor back one character.  Can be used for over striking, see ^V.</dd>
+
+<dt><code>^I</code></dt>
+
+<dd>Moves cursor forward one character.</dd>
+
+<dt><code>^J</code></dt>
+
+<dd>Moves cursor down one line.</dd>
+
+<dt><code>^K</code></dt>
+
+<dd>Moves cursor up one line.</dd>
+
+<dt><code>^L</code></dt>
+
+<dd>Clear the screen.</dd>
+
+<dt><code>^M</code></dt>
+
+<dd>Moves cursor the left edge of screen, on the same line.</dd>
+
+<dt><code>^N</code></dt>
+
+<dd>Set paper ink.  The paper ink is that which forms the background to characters.  <code>^N0</code> sets paper 0, <code>^N1</code> sets one etc... up to 3 in mode 1.  <code>^N0</code> and <code>^N1</code> only are available in mode 2.</dd>
+
+<dt><code>^O</code></dt>
+
+<dd>Set pen ink.  The pen ink is that which forms the letters themselves.  Use as the <code>^N</code> command.</dd>
+
+<dt><code>^P</code></dt>
+
+<dd>Fill the cursor character with current paper ink.</dd>
+
+<dt><code>^Q</code></dt>
+
+<dd>Clear from left edge of window to cursor.</dd>
+
+<dt><code>^R</code></dt>
+
+<dd>Clear from right edge of window to cursor.</dd>
+
+<dt><code>^S</code></dt>
+
+<dd>Clear from start of window to cursor.</dd>
+
+<dt><code>^T</code></dt>
+
+<dd>Clear from cursor to the end of the window.</dd>
+
+<dt><code>^U</code></dt>
+
+<dd>Stops characters going to the screen, until a <code>^F</code> is met.</dd>
+
+<dt><code>^V</code></dt>
+
+<dd>Allows over striking.  After a <code>^V1</code> command, only the foreground of a character is printed, so that many characters can be over striked to form another character.  If you change the pen ink while doing this you could achieve multicoloured characters in mode 1.  <code>^V0</code> Stops this option.</dd>
+
+<dt><code>^W</code></dt>
+
+<dd>Changes the way graphics work.  Not used.</dd>
+
+<dt><code>^X</code></dt>
+
+<dd>Swaps the paper and pen inks (inverse characters.)</dd>
+
+<dt><code>^Y</code></dt>
+
+<dd>Set matrix of a symbol.  Cannot really be used, since a zero in the following list would stop the string, also characters #80-#FF are not available.</dd>
+
+<dt><code>^Z</code></dt>
+
+<dd>Set window.  See manual.  It is better to use the <code>WINDOW</code> command.</dd>
+
+<dt><code>^[</code></dt>
+
+<dd>Change stream.  Directs following text to the window number given.  Eg. <code> print &lt;^[1Hello^[0Goodbye&gt; </code> sends Hello to window 1, and Goodbye to window 0.</dd>
+
+<dt><code>^\</code></dt>
+
+<dd>Set ink to a pair of colours.  For example <code>^\0@@</code> sets ink 0 to black, <code>^\2CZ</code> sets ink 2 to flashing red and white.  The colours are also listed in the Amstrad manual.  @ corresponds to colour zero, A to 1, B to two, etc... up to Z for 26.</dd>
+
+<dt><code>^]</code></dt>
+
+<dd>Sets the border colour.  Used as <code>^\</code>.  Eg. <code>^]@@</code> sets border to black.</dd>
+
+<dt><code>^^</code></dt>
+
+<dd>Move the cursor to top left hand corner of screen.</dd>
+
+<dt><code>^_</code></dt>
+
+<dd>Move cursor to a position in the window.  See manual.</dd>
+
+</dl>
+
+<p>Any characters between tilde (<code>~</code>) characters will have 128 added to their ASCII codes.  This allows alternate character sets (<a href="#section-7">see chapter 7</a>).</p>
+
+<p>Also available is the <a href="#command-PRINTF">PRINTF command</a>, which will print the contents of a file.  This has only limited application in a cassette based adventure, but is useful for saving space on long descriptions in a disc adventure.  For details see <a href="#command-PRINTF">PRINTF</a> in <a href="#section-5">chapter 5</a>.</p>
+
+
+<h2><a id="section-10" name="section-10">10. Windows and Colours</a></h2>
+
+<p>Windows and colour can be very effective when used in an adventure.  ADLAN provides facilities for both.  The file WFRAME on the ADLAN disc is an example of windowing techniques.</p>
+
+<p>Colour is effective for separating descriptions from objects, commands from responses and messages etc.  Don't forget that the colours you choose on a colour monitor may not be visible on a green-screen.  If this is so, give the player a command to switch to more visible colours.</p>
+
+<p>Printing with colour is very simple.  In mode 2 there are only two "inks" available, but each can be set to any of the available colours (<a href="#section-5">see chapter 5</a>).  In mode 1 there are four inks.  To print a string using the inks use the ^O control code.  This changes the "pen" to the ink given.  For example:</p>
+
+<blockquote><pre>
+print &lt;^O1Hello ^O2Goodbye&gt;
+</pre></blockquote>
+
+<p>would display "Hello" in ink 1, and "Goodbye" in ink 2.  The ^O code only changes the ink in which the letters are printed.  To change the ink that the letters are printed on use ^N.  This changes the "paper" to the ink given.  For example:</p>
+
+<blockquote><pre>
+print &lt;^O1^N2ABC&gt;
+</pre></blockquote>
+
+<p>would display "ABC" in ink 1 on ink 2.  So if ink 1 was red, and ink 2 was blue, "ABC" would appear in red on blue.</p>
+
+<p>The complexity of windows may vary, from a simple split screen for descriptions and commands, to a complete message overlay system.  You can define a window at any time, and re-define it later to another place on the screen if you wish.  To display text in the window the ^[ control code is used.  For example:</p>
+
+<blockquote><pre>
+window 1 1 40 1 10
+...
+print &lt;^[1This text goes to window one.&gt;
+</pre></blockquote>
+
+<p>Each window has its own paper and pen.  So if you use the ^O or ^N control codes in a window they will only effect the colours in that window.  The <a href="#command-INK">INK command</a> always effects the whole screen.</p>
+
+<p>If you intend to use both graphics and windows in your adventure, then you must redefine the windows in the DESCRIPTION code, and re-display their contents IN THE BEFORE CODE.  This is because any pictures will destroy whatever is on the screen at the time they are displayed.  So, if you have a window which displays the players inventory, the window must be re-printed in the BEFORE code.</p>
+
+
+<h2><a id="section-11" name="section-11">11. Errors</a></h2>
+
+<p>There are two types of error in ADLAN.  The first sort is that which occurs while the program is being compiled (compile time errors).  The other is the type that occur while the finished adventure is running (runtime errors).</p>
+
+
+<h3><a id="section-11.1." name="section-11.1.">11.1. Compile Time Errors</a></h3>
+
+<dl>
+
+<dt>unexpected end of text</dt>
+
+<dd>The end of the text was found before the program was complete.</dd>
+
+<dt>unexpected keyword</dt>
+
+<dd>This error has two meanings.  Either the sections of the program are in the wrong order, or one of the small words (<code>AT</code>, <code>THEN</code>, <code>TO</code> etc) is missing or misspelt.</dd>
+
+<dt>unknown keyword</dt>
+
+<dd>An unknown command or expression keyword has been found.</dd>
+
+<dt>bad syntax</dt>
+
+<dd>A symbol has been left out, or the wrong symbol used.  In this context symbols are characters such as commas, semicolons, etc.</dd>
+
+<dt>too many status letters used</dt>
+
+<dd>Only 8 status letters can be used in any one program.  This error does not mean that an object has too many status letters.</dd>
+
+<dt>not enough space for nouns</dt>
+
+<dd>The number of nouns exceeds the number of noun slots that were reserved after the <code>OBJECTS</code> keyword.  Increase this number.</dd>
+
+<dt>number too large</dt>
+
+<dd>Normally numbers are in the range 0...65535.  This is the range that variable can hold.  This error never occurs at runtime.  Any overflows during runtime are ignored, so that 65535+1=0 and 0-1=65535.</dd>
+
+<dt>run out of memory</dt>
+
+<dd>There is not enough memory for the object code.  You can make more memory available by turning off ROMs which are not used, using more messages instead of repeating strings, and compiling from file instead of memory.</dd>
+
+<dt>bad location code</dt>
+
+<dd>Location codes must be single letter, followed by a number between 0 and 255.  If the number is left out, zero is used.</dd>
+
+<dt>duplicate location code</dt>
+
+<dd>There is more than one location with the same code.</dd>
+
+<dt>object already put somewhere</dt>
+
+<dd>An object, which has been declared in the <code>OBJECTS</code> section, has already been moved to a location in the <code>PLACES</code> section.</dd>
+
+<dt>unknown word</dt>
+
+<dd>A word after the <code>TYPED</code> command, or the <code>LINK</code> command, is not one that was declared in the <code>WORDS</code> section.</dd>
+
+<dt>no start location specified</dt>
+
+<dd>The start location for the adventure must be specified in square brackets after the keyword <code>PLACES</code>.</dd>
+
+<dt>bad control code</dt>
+
+<dd>Control codes are accepted in the range <code>^A</code> to <code>^Z</code>, <code>^a</code> to <code>^z</code> (same as capitals), <code>^[</code>, <code>^^</code>, <code>^\</code>, <code>^]</code>, <code>^_</code>.</dd>
+
+<dt>file error</dt>
+
+<dd>A file cannot be opened, or closed.  With disc systems the disc ROM will generate a message before this one to explain.  On tape systems the error only usually occurs if a corrupted tape has been played, or the user hit escape.</dd>
+
+<dt>not a direction word</dt>
+
+<dd>The word used with the <code>LINK</code> command must be one of the first four declared.</dd>
+
+<dt>bad message number</dt>
+
+<dd>Message numbers can be in the range 0...32767.</dd>
+
+<dt>escape pressed</dt>
+
+<dd>The escape key was pressed twice during compilation.</dd>
+
+</dl>
+
+
+<h3><a id="section-11.2." name="section-11.2.">11.2. Runtime Errors</a></h3>
+
+<dl>
+
+<dt>message not found</dt>
+
+<dd>The message number requested after the dollar symbol has not been declared.</dd>
+
+<dt>object not found</dt>
+
+<dd>The user has tried to alter the status of object zero, or tried to examine object zero etc.</dd>
+
+<dt>bad item number</dt>
+
+<dd>Only ITEM1 to ITEM8 can be accessed.</dd>
+
+<dt>location XXX not found</dt>
+
+<dd>Location XXX was not declared in the <code>PLACES</code> section.</dd>
+
+</dl>
+
+
+<h2><a id="section-12" name="section-12">12. The Framework File</a></h2>
+
+<p>Also supplied with ADLAN is a "framework" file.  This contains a simple outline for an adventure.  The file is called "FRAME.ADL", and is in pure ASCII.  It does not have any status letters implemented, but just has the simple standard verbs normally found in adventures.</p>
+
+
+<h2><a id="section-A" name="section-A">A. Disc Contents</a></h2>
+
+<dl>
+
+<dt><code>FRAME.ADL</code></dt>
+<dd>ASCII file containing framework</dd>
+
+<dt><code>FRAME.PDL</code></dt>
+<dd>PROTEXT file containing framework</dd>
+
+<dt><code>FRAME.BDL</code></dt>
+<dd>BASIC quoted file containing framework</dd>
+
+<dt><code>WFRAME.ADL</code></dt>
+<dd>ASCII framework using windows and colours in mode 1</dd>
+
+<dt><code>WFRAME.PDL</code></dt>
+<dd>PROTEXT framework using windows and colours in mode 1</dd>
+
+<dt><code>WFRAME.BDL</code></dt>
+<dd>BASIC quoted framework using windows and colours in mode 1</dd>
+
+<dt><code>EXAMPLE.ADL</code></dt>
+<dd>ASCII file containing example adventure</dd>
+
+<dt><code>BARTREK.BIN</code></dt>
+<dd>An example adventure, BARTREK.  Run it and play.</dd>
+
+<dt><code>COMPRESS.BAS</code></dt>
+<dd><a href="#section-7">see chapter 7</a></dd>
+
+<dt><code>CONVERT.BAS</code></dt>
+<dd><a href="#section-7">see chapter 7</a></dd>
+
+</dl>
+
+
+<h2><a id="section-B" name="section-B">B. Document History</a></h2>
+
+<table>
+
+<tr valign="top">
+<td>2.5</td>
+<td>1988-10-29</td>
+<td><a href="mailto:Richard.Brooksby@pobox.com">RB</a></td>
+<td>This is the last modification date documented in original PROTEXT files for the manual.  I don't know if this is before or after the last release.</td>
+</tr>
+
+<tr valign="top">
+<td>2.6</td>
+<td>1999-09-17</td>
+<td><a href="mailto:Richard.Brooksby@pobox.com">RB</a></td>
+<td>Converted to HTML from PROTEXT files on disk images helpfully converted from old three inch disks by Martyn Lycett.  Corrected a few spelling mistakes and changes a little of the punctuation and layout to make it more suitable for HTML, but otherwise left things pretty much as they were.</td>
+</tr>
+
+<tr valign="top">
+<td>2.7</td>
+<td>1999-10-18</td>
+<td><a href="mailto:Richard.Brooksby@pobox.com">RB</a></td>
+<td>Prepared for web publication by adding document history, copyright, and licence information.</td>
+</tr>
+
+<tr valign="top">
+<td>2.8</td>
+<td>2000-03-20</td>
+<td><a href="mailto:Richard.Brooksby@pobox.com">RB</a></td>
+<td>Converted to XHTML 1.0 format.</td>
+</tr>
+
+
+</table>
+
+
+</body>
+
+</html>

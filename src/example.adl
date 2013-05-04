@@ -1,0 +1,287 @@
+                          (ADLAN EXAMPLE ADVENTURE)
+
+OPTIONS
+  2; 0; <You can't go that way>; <^L>;
+ENDOPTIONS
+
+MESSAGES
+  S  <, small, weak and feeble, murmuring "water... water...">;
+  T  <towering above you, shouting "WATER! WATER!">;
+  C  <, rusted closed>;
+  W  <of water>;
+  O  <of oil>;
+  $1 <Ok>;
+  $2 <I can't see any about>;
+  $3 <You don't have any>;
+  $4 <Nothing happens>;
+ENDMESSAGES
+
+WORDS
+  north/n; south/s; east/e; west/w;
+
+  look/l; at;    (look and look at)
+  examine;
+  inventory/i/carry;
+
+  take/get/grab/seize;
+  pick;          (pick up)
+  up/u/climb;
+  drop/leave;
+  put;           (put down)
+  down/d/descend;
+
+  fill;
+  oil/lubricate;
+  water/irrigate;
+
+  stop/quit;
+ENDWORDS
+
+(Status letters:
+  Immovable, Small, Tall, Closed, full of  Oil, full of Water)
+
+OBJECTS
+  plant/hydrangea,IS,,<a plant>,<It looks like a hydrangea>;
+  bottle/flask/flagon,,,<a bottle >,<<
+The bottle is small and made of  brown glass. The stopper does not fit
+properly.>;
+  gate,IC,,<an iron gate>,<<
+The gate has some particularly fine scrollwork on it; alas, all rusted
+and tarnished.>;
+ENDOBJECTS
+
+PLACES  [r1]
+  r1,- - r2 -,plant,<<
+You are at the west end  of  an  oval  room, carved from grey stone. A
+shaft of light comes through a hole  high in the ceiling. In the floor
+of the room are two pits, one  at  this  end, one at the other. In the
+wall above you is a hole, large  enough  for a person, but too high to
+reach.>,{},
+{
+  if both typed down and not typed put
+  {
+     moveto p1 describe loop
+  }
+  if both status plant is T and both typed up and not typed pick
+  {
+     moveto x describe loop     (Climbing the plant)
+  }
+};
+
+  r2,- - - r1,gate, picture <rustgate.csc>, <<
+You are at the east  end  of  an  oval  room.  In  the east wall is an
+alcove with a gate across it. There is  a pit in the floor at this end
+of the room.>,
+{
+  if both describing and status gate is C
+  {
+     print <\The alcove is blocked by the gate.>
+  }
+},{
+  if both typed down and not typed put
+  {
+     moveto p2 describe loop
+  }
+};
+
+  p1,- - - -,bottle,<<
+You are in a steep-sided pit under the west end of the oval room. Some
+rough handholds have been cut to allow climbing out of the pit.>,{},
+{
+  if both typed up and not typed pick
+  {
+     moveto r1 describe loop
+  }
+};
+
+  p2,- - - -,,<<
+You are in a deep pit  under  the  east  end  of the oval room. Gravel
+makes climbing difficult. There is a pool  of oil on the ground in the
+pit.>,{},
+{
+  if both typed up and not typed pick
+  {
+     moveto r2 describe loop
+  }
+};
+
+  a1,- - - r2,,<<
+You are in  the  alcove  behind  the  gate.  A  small  stream of water
+trickles from a crack in the wall.>,{},{};
+
+  x,----,,<<
+Well done. You have  completed  an  extremely unchallenging adventure!
+Now write a better one.>,{ quit },{};
+
+  carry,----,,<>,{},{};
+ENDPLACES
+
+START
+{
+  ink 0 blue
+  ink 1 brightwhite
+
+  print <^L
+
+                   WELCOME TO THE EXAMPLE ADVENTURE
+
+           All that you have to do is escape from the cave!
+
+
+                       Press any key to begin.>
+
+  key
+}
+
+BEFORE
+{
+  if describing
+  {
+     print <\\Obvious exits:>
+     exits < N> < S> < E> < W> < none>
+     cr
+     if count here
+     {
+        print <\You can also see:\>
+        list here
+     }
+  }
+  print <\^P^X*^X>
+}
+
+AFTER
+{
+  if typed stop { quit }
+
+  if typed [examine/look at]
+  {
+     if find item 1 at here/carry
+     {
+        examine item 1 done
+     }
+     print $2 done
+  }
+
+  if typed look { describe done }
+
+  if typed inventory
+  {
+     if count carry
+     {
+        print <You are carrying:\>
+        list carry done
+     }
+     print <You aren't carrying anything.> done
+  }
+
+  if typed [take/pick up]
+  {
+     if find item 1 at carry
+     {
+        print <You've already got that.> done
+     }
+     if not find item 1 at here
+     {
+        print $2 done
+     }
+     if status item 1 is I
+     {
+        print <You can't take that.> done
+     }
+     move item 1 from here to carry
+     print $1 done
+  }
+
+  if typed [drop/put down]
+  {
+     if not find item 1 at carry
+     {
+        print $3 done
+     }
+     move item 1 from carry to here
+     print $1 done
+  }
+
+  if typed fill
+  {
+     if not find item 1 at carry
+     {
+        print $3 done
+     }
+     if both not equal item 1=bottle and item 1
+     {
+        print <You can't fill that.> done
+     }
+     if at p2
+     {
+        unmake bottle W         (empty out any water)
+        make bottle O           (fill with oil)
+        print $1 done
+     }
+     if at a1
+     {
+        unmake bottle O         (empty out oil)
+        make bottle W           (fill with water)
+        print $1 done
+     }
+     print <I can't fill the bottle here.> done
+  }
+
+  if typed oil
+  {
+     if not find item 1 at here
+     {
+        print $2 done
+     }
+     if not both find bottle at carry and status bottle is O
+     {
+        print <You don't have a suitable lubricant.> done
+     }
+     if equal item 1 = gate
+     {
+        print <You oil the gate and can push it open a little.>
+        unmake bottle O         (empty the bottle)
+        unmake gate C           (open the gate)
+        link east from r2 to a1 (allow player to go through)
+        done
+     }
+     if equal item 1 = plant
+     {
+        print <"Yuch" says the plant, shaking the oil of it's leaves.>
+        unmake bottle O
+        done
+     }
+     print $4 done
+  }
+
+  if typed water
+  {
+     if not find item 1 at here
+     {
+        print $2 done
+     }
+     if not both find bottle at carry and status bottle is W
+     {
+        print <You don't have any water.> done
+     }
+     if equal item 1 = gate
+     {
+        print <The gate gets even more rusty!>
+        unmake bottle W         (empty the bottle)
+        done
+     }
+     if equal item 1 = plant
+     {
+        print <<
+The plant spurts into  furious  growth,  climbing  up  and up until it
+reaches the hole in the wall.>
+        unmake bottle W         (empty the bottle)
+        unmake plant S
+        make plant T            (make the plant tall)
+        done
+     }
+     print $4 done
+  }
+
+  print <I don't understand.>
+}

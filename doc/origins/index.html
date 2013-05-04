@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+
+<title>Adlan</title>
+
+<link rel="stylesheet" href="/default.css" type="text/css" />
+
+</head>
+
+<body>
+
+<h1><img src="title.gif" alt="The Adlan Adventure Game Compiler" width="264" height="72" /></h1>
+
+<address><a href="mailto:Richard.Brooksby@pobox.com">Richard Brooksby</a>, 1999-09-20</address>
+
+<p>I used to develop software for the Amstrad CPC back in the mid-80s when I was a teenager.  My largest and most successful project was the "Adlan" adventure game compiler ROM, which was published by Graduate Software, and reviewed in at least one magazine.</p>
+
+<p>I wrote Adlan before I went to University and got to really understand how conventional compilers worked.  It just reads tokens and emits Z80 machine code straight away, which made it fast, at least.  It also means that the language is entirely in prefix notation -- there's no infix expression parser.  That didn't matter much because you don't tend to do much arithmetic in an adventure game.</p>
+
+<p>Adlan was a pretty cool project.  It's all in Z80 assembler, compiled with the Arnor MAXAM assembler ROM.  It's divided into files because it wouldn't all fit in memory.</p>
+
+<p>The source code is for the ROM version.  I think it can still generate a RAM version (which could be run from disk) with a bit of work.</p>
+
+<dl>
+
+<dt><a href="adlan.max">adlan.max</a></dt>
+
+<dd>The master file.  This was kept small so the program could be assembled into RAM for debugging.</dd>
+
+<dt><a href="adlan1.sub">adlan1.sub</a></dt>
+
+<dd>Most of the compiler is here, starting right at the beginning of the file.  Each main section of the source code is processed in turn.  Subroutines for compiling things like strings (<code>comp_str</code>), word lists (<code>comp_words</code>), code statements (<code>comp_code</code>), and expressions <code>comp_exp</code>) follows.</dd>
+
+<dt><a href="adlan2.sub">adlan2.sub</a></dt>
+
+<dd>This short file contains a few more subroutines for compiling things like colour names (<code>comp_colour</code>) and then has tables of all the compiler error messages and keywords.</dd>
+
+<dt><a href="adlan3.sub">adlan3.sub</a></dt>
+
+<dd>This is the run-time code for the adventure.  It has the run-time implementations of things like the parser, formatted text output, the various language commands, loading and saving games, and so on.</dd>
+
+<dt><a href="adlan4.sub">adlan4.sub</a></dt>
+
+<dd>This contains a the utility commands that came on the ROM: <code>COMPRESS</code>, <code>ROMOFF</code>, etc.  It has the picture compression routine used to create the ".csc" files, which works by storing the differences between lines on the screen.  It also contains the help text, and the fonts.  The fonts were created using another program I wrote called "Charon".</dd>
+
+<dt><a href="adlan.rom">adlan.rom</a></dt>
+
+<dd>Finally, here's the ROM image, suitable for use in emulators, or for blowing on to an EPROM.  I rebuilt this recently using an emulator so that I could add copyright messages allowing distribution of the ROM.  You can read the messages in the <code>copying</code> routine in the <a href="adlan4.sub">adlan4.sub</a> file.</dd>
+
+</dl>
+
+<p>There was a large user manual written using the Arnor PROTEXT word processor ROM.  It was originally printed on an Epson dot matrix printer.  I've converted the whole thing into HTML, but preserved pretty much all the original text as it was.  There were a bunch of template source files distributed with Adlan, which are also here.</p>
+
+<dl>
+
+<dt><a href="manual.html">User Manual</a></dt>
+
+<dd>The user's manual, converted to HTML.</dd>
+
+<dt><a href="frame.adl">frame.adl</a></dt>
+
+<dd>ASCII file containing framework</dd>
+
+<dt><a href="frame.bdl">frame.bdl</a></dt>
+
+<dd>BASIC quoted file containing framework</dd>
+
+<dt><a href="wframe.adl">wframe.adl</a></dt>
+
+<dd>ASCII framework using windows and colours in mode 1</dd>
+
+<dt><a href="wframe.bdl">wframe.bdl</a></dt>
+
+<dd>BASIC quoted framework using windows and colours in mode 1</dd>
+
+<dt><a href="example.adl">example.adl</a></dt>
+
+<dd>ASCII file containing the example adventure used in the User Manual</dd>
+
+</dl>
+
+<p>I was a pretty poor speller.  The <a href="unical.gif">"unical" font</a> should really have been "uncial".  It was based on calligraphy example I found with an Osmiroid fountain pen.</p>
+
+<p>Last but by no means least, my school friend and I spent a long time putting together an adventure game called "Bar Trek", a Star Trek spoof adventure.  It was a lot of fun to do, and I still found it funny to play even after 13 years, probably because I still have a childish sense of humour.  Writing Bar Trek was the real test case for Adlan, and was the reason why most of the features were developed.  Here's the opening screen for Bar Trek, which kind of sets the tone for the rest of the game:</p>
+
+<p align="center"><img src="bartrek.gif" alt="(screen shot of the Bar Trek opening screen)" width="322" height="202" /></p>
+
+<p>I drew this picture using my own Picgen program (another project) which I'll put on the web when I retreive it.  I also discovered a <a href="bartrek-map.jpg">pencil-drawn map</a> of the game.</p>
+
+<dl>
+
+<dt><a href="supplied.dsk">supplied.dsk</a></dt>
+
+<dd>The disk that was supplied with the Adlan ROM.  It contains the runnable Bar Trek adventure, plus all the framework files above and some programs to help with compressing screens.  It's in the EDSK format used by most of the Amstrad CPC emulators.  (I'm using <a href="http://bricerive.free.fr/cpc">CPC++</a>.)  You might need to right-click or click-and-hold on this and use "Save" or "Download" to make your browser do the right thing.</dd>
+
+</dl>
+
+<p>It's interesting to read what I thought about software when I was just 17:</p>
+
+<blockquote>
+<p>The ADLAN compiler was designed, not as an adventure creating package, but as an adventure language. It is intended to be as flexible and open-ended as possible, and not to restrict the user to a fixed type or format of adventure. ADLAN was written in response to other packages which did exactly that. As a result, the presentation of an adventure written using ADLAN requires a little more thought from the user. However, with proper use of windows, control codes, character sets and graphics I believe the result will be of higher quality.</p>
+
+<p>Any future versions of ADLAN-I will be upwardly compatable with this version.</p>
+
+<p>There is no commission to pay if you want to market adventures written with ADLAN, after all, that is what a compiler is for! However, a mention of ADLAN on your title screen would be appreciated.</p>
+
+<p>I hope you enjoy using ADLAN, and good luck.</p>
+</blockquote>
+
+<p align="center"><img src="sign-on.gif" alt="(screen capture of Adlan ROM sign-on banner)" width="250" height="46" /></p>
+
+<p>Many thanks to <a href="mailto:mcl@btinternet.com">Martyn Lycett</a> for retrieving the contents of my old three inch Amstrad diskettes so that I could put this information together.</p>
+
+<hr />
+
+<p><small>Copyright &copy; 1999-2000 <a href="mailto:Richard.Brooksby@pobox.com">Richard Brooksby</a>.  You may make and distribute verbatim copies of this document provided that you retain as they appear all copyright and licence notices.  You may <em>not</em> charge a fee for this document or for distributing this document.  You may <em>not</em> make or distribute derivative works (modified versions) of this document without the express written permission of the copyright holder.</small></p>
+
+</body>
+
+</html>

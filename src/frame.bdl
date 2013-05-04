@@ -1,0 +1,109 @@
+1 ''
+100 '                            (ADLAN FRAMEWORK FILE)
+110 '
+120 'OPTIONS
+130 '   2; 0; <You can't go that way>; <^L>;
+140 'ENDOPTIONS
+150 '
+160 'MESSAGES
+170 '   $1    <Ok.>;
+180 '   $2    <I can't see any about.>;
+190 '   $3    <You don't have any.>;
+200 'ENDMESSAGES
+210 '
+220 'WORDS
+230 '   north/n; south/s; east/e; west/w;
+240 '   up/u;
+250 '   down/d;
+260 '
+270 '   take/get/grab/sieze;
+280 '   pick;          (pick up)
+290 '
+300 '   drop/leave;
+310 '   put;           (put down)
+320 '
+330 '   inventory/i/carry;
+340 '   look/l;
+350 '   examine; at;   (look at)
+360 '
+370 '   quit/stop;
+380 'ENDWORDS
+390 '
+400 'OBJECTS
+410 '   object,,,<test object>,<test obj desc>;
+420 'ENDOBJECTS
+430 '
+440 'PLACES [s]
+450 '   s,s2---,object,<test description>,{},{};
+460 '   s2,x1 s --,,<another test>,{},{};
+470 '   x1,s s2 --,,<yet another>,{},{};
+480 '   carry,----,,<>,{},{};
+490 'ENDPLACES
+500 '
+510 'BEFORE
+520 '{
+530 '   cr
+540 '   if both describing and count here
+550 '   {
+560 '      print <\You can also see:\>
+570 '      list here cr
+580 '   }
+590 '   print <^P^X*^X >
+600 '}
+610 '
+620 'AFTER
+630 '{
+640 '   if typed quit
+650 '   {
+660 '      print <Are you sure you want to quit? (Y/N)>
+670 '      if yesno { quit }
+680 '      done
+690 '   }
+700 '
+710 '   if typed [take/pick up]
+720 '   {
+730 '      if find item 1 at carry
+740 '      {
+750 '         print <You've already got that.> done
+760 '      }
+770 '      if not find item 1 at here
+780 '      {
+790 '         print $2 done
+800 '      }
+810 '      move item 1 from here to carry
+820 '      print $1 done
+830 '   }
+840 '
+850 '   if typed [drop/put down]
+860 '   {
+870 '      if not find item 1 at carry
+880 '      {
+890 '         print $3 done
+900 '      }
+910 '      move item 1 from carry to here
+920 '      print $1 done
+930 '   }
+940 '
+950 '   if typed inventory
+960 '   {
+970 '      if count carry
+980 '      {
+990 '         print <You're carrying:\> list carry done
+1000 '     }
+1010 '     print <You aren't carrying anything.> done
+1020 '  }
+1030 '
+1040 '  if typed [examine/look at]
+1050 '  {
+1060 '     if not find item 1 at here/carry
+1070 '     {
+1080 '        print <There's no more detail on that here.> done
+1090 '     }
+1100 '     examine item 1
+1110 '     done
+1120 '  }
+1130 '
+1140 '  if typed look { describe done }
+1150 '
+1160 '  print <I don't understand.>
+1170 '}
