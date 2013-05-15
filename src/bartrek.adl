@@ -1,0 +1,1431 @@
+                           (BARTREK, THE MOTION ADVENTURE)
+                             (copyright Richard Brooksby)
+
+OPTIONS
+   2; 5; <You can't walk that way>; <^L>;
+ENDOPTIONS
+
+(Status letters:
+   wearAble, Broken, Person, Immovable
+   FO of oil, FT of water)
+
+MESSAGES
+   W     < (which you're wearing)>;
+   F     <of^U>;
+   O     <- covered in^F oil>;
+   T     <- covered in^F water>;
+   $1    <Okey Dokey>;
+   $2    <I can't see any about.>;
+   $3    <You're not carrying any>;
+   $4    <Sizzle sizzle, crackle crackle, oops, squelch...>;
+   $5    <\"When did I last see you for a checkup, Jim" says Clones>;
+   $6    <Please be more specific.>;
+   $7    <Nothing happens>;
+   $8    <\\Game over- press a key>;
+   $9    <"It isni working" says Grotty>;
+   $10   <You're in a leafy blue wood, with lots of trees too!>;
+   $11   <\\Press a key>;
+   $12   <\
+The love hungry klingoffs descend on you from all directions (klingoffs have a 
+talent for that) and remove your scanty costumes.>;
+   (Peoples responses)
+   $1000 <Stock: Fascinating, Captain>;
+   $1001 <Checkout: Still on course, Kyptyn>;
+   $1002 <Uhururu: Still no word from Starfleet, Captain>;
+   $1003 <Zulu: Standard orbit achieved, Captain>;
+   $1004 <<
+Grotty: Ahm doin' ull I cun, Cap'n, but I canna hold on much longer.>;
+   $1005 <Clones: He's dead, Jim>;
+   $1006 <Worm: Centrefold's good this month>;
+   $1007 <The guard snores loudly>;
+   $1008 <Slave girl: Ig Og Ig Og Ig Og hey-nonny Og>;
+   $1009 <Fungus: Shhhhhloooooooop!>;
+   $1010 <<
+The princess does not reply, but looks at you adoringly with those big eyes. 
+"Oh no," you think, "if we fall in love she's bound to be bumped of later.">;
+   $1011 <Guard: Ubgob schloogly zachlik?>;
+   $1012 <Guard: UD-1LR-1U2BF!>;
+   (Crew conversation)
+   $2000 <"Hi Stock, you green-blooded vulcan frogbaiter" says Clones>;
+   $2001 <<
+"I see you're illogical again today Dr DeCoy" says Stock
+"FASCinating" says Clones sarcastically>;
+   $2002 <Checkout yawns>;
+   $2003 <Checkout starts to sing:
+"Twisting... Twisting... Twisting ze night awee...
+ Twisting...-"
+"SHUT UP" shouts Clones>;
+   $2004 <<
+"Fascinating" says Stock
+"What is you pointed-eared son-of-a-vulcan" says Clones
+Stock arches an eyebrow.>;
+   $2005 <<
+"He's been acting very strangely" whispers Clones, looking sideways at you
+"I like him, he is my frind" answers Checkout>;
+   $2006 <<
+"Humans!" says Stock, in his vastly superior vulcan accent (which makes him 
+sound like he comes from Birmingham)>;
+
+   $3000 <I'm working on it>;
+   $3001 <U-1LDB2F>;
+   $3002 <Nearly there>;
+   $3003 <Oh damn!>;
+   $3004 <Anyone got a screwdriver?>;
+
+ENDMESSAGES
+
+
+WORDS
+   north/n; south/s; east/e; west/w;
+   up/u/climb;
+   down/d/descend;
+
+   take/get/grab/sieze/come/follow;
+   pick;          (pick up)
+
+   drop/leave/stay/remain;
+   put;           (put down, put on)
+
+   inventory/i/carry;
+   look/l;
+   examine; at;   (look at)
+   save; load;
+   qsave; oops;
+
+   quit;
+
+   hi/hello/hullo/talk/say/speak;
+   beam;
+   give/hand/offer;
+   fire/shoot/activate/aim/point;
+   hit/attack/kick/punch/kill/main;
+   throtte/strangle;
+   wear; on; off;
+   press/push; green; red; plunger;
+   fuck/shit/cunt/wank/screw/crap/bast/thatcher;
+   insert; plug; in/into;  (plug in, put in)
+   dance;
+   use/utilise;
+   open; let; hair/hare;
+   fill;
+   pour/dispense;
+   water;
+   oil/lubricate;
+   drink/eat/consume;
+   solve/do/play;
+ENDWORDS
+
+
+OBJECTS [67]
+   Stock/Spock,P,0,<Mr Stock>,<Stock has pointed ears (surprise surprise)>;
+
+   Checkout,P,1,<Navigator Checkout>,<Checkout is grinning manically>;
+
+   Uhuru,P,2,<Lt Uhururu>,<Uhururu has a metal thingy stuck to her ear>;
+
+   Zulu/Sulu,P,3,<Helmsman Zulu>,
+            <Zulu's non-regulation 6ft rapier catches your eye>;
+
+   Grotty/Scot,P,4,<Engineer Grotty>,
+   <Grotty is NOT wearing a kilt. He looks strange without trousers, though>;
+
+   Clones/Bones/Decoy/Mccoy,P,5,<Dr "Clones" DeCoy>,
+            <Clones looks deadly serious>;
+
+   worm,PI,6,<a worm>,
+      <The worm is sitting on a sunbed, under a sunlamp, reading H&E.>;
+
+   guard/klingoff,PI,7,<a klingoff guard>,
+      <The guard is standing with his back suggestively toward you.>;
+
+   slave/girl/orion,P,8,<an orion slave girl>,<<
+The dancing of the mindless green orion slave girls is supposed to drive any 
+concious being wild with desire. This one is probably no exception.>;
+
+   slime/blub/fungus/alien,IP,9,<an alien fungus blocking the cave mouth>,<<
+The fungus is sliming around happily>;
+
+   terry/wogan,IP,,<Terry the Wogan>,<>;
+
+   rapunzel/princess,P,10,<the beautiful princess Rapunzel>,<<
+The princess' well endowed body, her silky thighs, make your heart pound. Her 
+large firm... NO, keep under control... remember what Clones told you about 
+that.>;
+
+   xxxx,PI,11,<a klingoff guard>,<He's just your run-of-the-mill guard.>;
+
+   bicorder/tricorder,,,<a bicorder>,<<
+It is marked: Philishave model 34- Not to feature in adventure games.>;
+
+   costumes/clothes,A,,<spare slave girl costumes>,
+      <There's very little of them!>;
+
+   trans,IB,,<the transporter>,<<
+The transporter is far too complex for anyone except that smartass Grotty.>;
+
+   seeds/sesame,,,<some sesame seeds>,<MEGACLUE!>;
+
+   fazer/phaser,B,,<a fazer>,<The fazer looks like a garden spray.>;
+
+   photon/torp,I,,<a photon torpedo>,
+               <The torpedo is emitting alpha particles.>;
+
+   crystal/deymithing/dey,,,<some dey-mith-ing crystals>,
+            <The crystals look like spray-painted broken glass>;
+
+   communicator/radio,,,<a communicator>,
+            <The communicator looks like a flip-top cheese grater>;
+
+   handbag/bag,,,<a handbag>,
+            <The handbag has the initials JXB embossed on it.>;
+
+   earplugs/plugs,A,,<a pair of earplugs>,<<
+The stange earplugs were obviously not designed for human use, since they are 
+6 inches long, made of wood, and have signs of hammering on their heads. 
+Still, they will do.>;
+
+   battery/cell,,,<a battery for a fazer>,<<
+A small note on the battery reads:
+                                 ACME BATTERY
+                             TOTALLY IDIOT PROOF
+        ENSURE CORRECT POLARITY OR THERMONUCLEAR EXPLOSION WILL FOLLOW.>;
+
+   door,I,,<a door in the tower base>,<<
+The door is made out of plastic, and has been very cleverly designed so it 
+decieves the eye into believing that it is, in fact, a door.>;
+
+   sandwich/bread,,,<a sandwich>,<Cheese & tomato, and three weeks old.>;
+
+   rock/stone,I,,<a plastic rock>,
+      <The rock is blowing about a bit in the breeze.>;
+
+   cube/blue,,,<a bluebricks cube>,<<
+The bluebricks cube (sometimes called the bluebricks sexahedron) is an 
+infernal weapon of evil mind destruction. This is obviously a black market 
+item.>;
+
+   thermos/flask/bottle,,,<a thermos flask >,<<
+The thermos has remnants of old coffee in it, and as always the screw on cups 
+are missing.>;
+
+   plant/hydr,I,,<a large pot plant>,<It looks like a hydranger.>;
+
+   gate/door,I,,<a gate>,<<
+It's a gate, and it's part of a joke so don't ask me to justify its existance.>;
+
+   brandy/grom,,,<some Gromulan Brandy>,<<
+alcohol-78%, franciumflouride-10%, fourstar-11%, monosodiumglutimate-9%. 
+(The abominable addition is due to fumes leaking into the lab.)>;
+
+   beer/barrel,,,<a barrel of beer>,<Shan't.>;
+
+ENDOBJECTS
+
+
+PLACES [s1]
+      (*** MUF EXERCISE ***)
+
+   s1,- s2 - -,stock checkout uhururu zulu,<<
+You're on the bridge. Myriad flashing lights, knobs and dials, flash, wink and 
+beep in an attempt to drive you crazy. A greater mind would go insane, for you 
+it's routine. On the screen is a view of the planet below. To the south lies 
+the TURBOLIFT(C)(R)(TM)>,{},{};
+
+   s2,s1 - - -,,<<
+Unfortunately, you're in the TURBOLIFT. You could risk motion sickness and go 
+down. "Bridge North" says the lift politely>,{},
+{
+   if both typed down and not typed put
+   {  moveto s3 describe loop }
+};
+
+   s3,s7 - - -,,<<
+Sadly, you're in the TURBOLIFT. You can go up, or alternatively, down. "This 
+floor, transporter, Stock's lab, sick bay, ladies underwear." says the 
+lift.>,{},
+{
+   if both typed up and not typed pick
+   {  moveto s2 describe loop }
+   if both typed down and not typed put
+   {  moveto s5 describe loop }
+};
+
+   s4,- - s7 -,worm fazer,<<
+You're in Stock's lab. All around logically aranged tasteful Habitat control 
+consoles gleam dully. Piles of old washing machines (Stock's hobby and "little 
+earner") festoon this room.>,{},{};
+
+   s5,s9 - - -,,<<
+Bad luck, you're in the TURBOLIFT. You can go up. "This floor, engineering, 
+Captain's quarters">,{},
+{
+   if both typed up and not typed pick
+   {  moveto s3 describe loop }
+};
+
+   s6,- s7 - -,transporter,<<
+You're in the transporter room. Pan lids hang from the ceiling, suspended 
+above the electric hob rings on the floor. Mucky business, transporting.>,{},
+{
+   if typed beam
+   {
+      if not find grotty at s6/f
+      {  print <You havn't the brains to work the infernal thing> loop }
+      if status transporter is B
+      {  print $9 loop }
+      print $4
+      print $11 key
+      moveto p1 describe loop
+   }
+};
+
+   s7,s6 s3 s11 s4,,<<
+You're in the corridor. Crew members bounce back and forth against the walls, 
+spilling their trays of plastic food.Someone has turned up the underfloor 
+vibro-massage too high.>,{},{};
+
+   s8,- s9 - -,handbag,<<
+You are inside your quarters. Festering piles of washing have piled up over 
+the years, and the computer is still displaying "War and Peace" to annoy 
+you.>,
+                  {},{};
+
+   s9,s8 s5 s10 -,torp,<<
+You're in the lower corridor. Thing's are quieter down here; the smell keeps 
+the crew away.>,{},{};
+
+   s10,- - - s9,crystals grotty,<<
+You're on the engineering deck: a labyrinth of wire mesh and scotch whisky 
+bottles, understood only by Grotty. Nearby there is a funnel leading into the 
+floor, marked: "BEER INLET".>,{},
+{
+   if typed [pour beer]
+   {
+      if not find beer at carry
+      {
+         print $3 loop
+      }
+      move beer from carry to limbo
+      print <<
+The beer flows down the pipes, into the Beer-Antimatter Capture Bladder, 
+revitalising the parts that other alcoholic substances cannot reach. The MUF 
+Exercise can now go about her pointless journey once more.
+
+                                  WELL DONE
+
+You've completed BARTREK: THE MOTION ADVENTURE. On the whole I think you've 
+done rather well. I hope you enjoyed yourself, as writing the adventure has 
+been a lot of fun. I wholeheartedly apologise for the awful humor and poor 
+spelling. Thanks for playing.
+                                        -Rich Brooksby>
+      print $11 quit
+   }
+};
+
+   s11,- - - s7,clones seeds bicorder,<<
+You're in the sick bay. Little red needles bob aimlessly up and down on the 
+walls. You sit for a while on one of the rock-hard tungsten-carbide 
+beds.>,{},{};
+
+      (*** PLANET SURFACE ***)
+
+   p1,- p2 - p2,,<<
+You are in a leafy grove. What is strange is the high-pitched hum which 
+accompanies every landing party from the Exercise. The blue filter on the 
+camera also helps create a really false alien atmosphere. Otherwise, it looks 
+hauntingly like Earth.>,
+{
+   if both not been here and find stock at here/f
+   {
+      cr print <<
+"Fascinating," says Stock, his eyebrow raised, "this is obviously a prime 
+example of Hotchkin's Parallel Planet Development."
+But you know different. You have realised why this planet looks like Earth, 
+and it has nothing to do with wossisname Hotchkin. The producer has cut your 
+budget!>
+   }
+},{};
+
+
+   p2,p1 p3 p1 p1,earplugs,<<
+This is an even more leafy grove than before! It's very grovelike, and rather 
+leafy. Well, what did you expect, Shakespeare?>,{},{};
+
+   p3,----,,<>,
+{
+   print <<
+Suddenly you are hit over the head with a blunt instrument (which feels 
+suspiciously like a piano). The world explodes into blackness. But as you go 
+down your last thoughts are for your crew:
+"Where the hell are they!" you think...\\>
+   if not find clones at f
+   {
+      print $8 key restart
+   }
+   print <<
+Fortunately, Clones is able to bring you round.>
+   print $11 key
+   move communicator from carry to limbo
+   moveto d1 describe loop
+},{};
+
+      (*** DUNEGEON ***)
+
+   d1,- d5 - -,guard,<<
+You're in a pokey little cell.>,
+{
+   if both find guard at here and describing
+   {
+      print <
+No bars block the exit, but force beams suggest that if you tried to escape 
+you would be bounced back, and the incidental music would then peak to an 
+ecstatic crescendo.>
+   }
+},{
+   if both either not item 1 or equal item 1=guard and
+      both typed strangle and
+      both find stock at here/f and find guard at here
+   {
+      print <<
+Anticipating your move, Stock goes over to the guard and brings to bear is 
+awesome vulcan talents. Yes, Stock uses the VULCAN MIND THROTTLE. Siezing the 
+guard by the neck he [CENSORED BY THE OFFICIAL ARTS NOBBLING COUNCIL] and the 
+guard falls dead to the ground. By an amazing coincidence, he falls on the 
+door control!>
+      move guard from here to limbo
+      link west from d1 to d2
+      loop
+   }
+};
+
+   d2,- d4 d1 -,,<<
+You are in a dungeon corridor. A pokey cell lies east, with a dead klingoff 
+guard asleep in the doorway. To the west there is another cell, with a red 
+button and a green button on the door.>,
+{
+   if both not been here and find checkout at f
+   {
+      print <\"Press the pink wan, Kyptyn" says Checkout>
+      if find clones at f
+      {
+         print <\"There isn't one, thicko" suggests Clones>
+      }
+   }
+},{
+   if typed press
+   {
+      if typed green
+      {
+         print <The button goes click. > print $7
+         #2=1 loop
+      }
+      if typed red
+      {
+         print <The button goes klunk. >
+         if not #2
+         {
+            print <The cell door opens.>
+            link west from d2 to d3
+            #2=2
+         }
+         loop
+      }
+   }
+};
+
+   d3,- - d2 -,slave costumes,<<
+You're in another pokey cell. Very boring really.>,{},{};
+
+   d4,d2 - - -,slime,<<
+You're at the cave exit. Something makes you vaguely uneasy about this place. 
+Perhaps it's the green slime sliding up the walls.>,
+{
+   if not been here
+   {
+      if find stock at f
+      {
+         print <
+"Fascinating" says Stock, from behind an arched eyebrow "obviously a silicon 
+based polymorph cromatozoan of the blubbery type"
+"Obviously" says the fungus, sarcastically.>
+      }
+      if find clones at f
+      {
+         print <
+"Ahh, the poor thing looks hungry" says Clones>
+      }
+      if find checkout at f
+      {
+         print <
+"Yuk" says Checkout>
+      }
+   }
+},{};
+
+   d5,d1 - - -,battery wogan,<<
+You're in a horrible smelly little BBC set, just to the south of the cell. 
+Around you are "comfy" chairs, and in one of them sits a man. Too late, you 
+realise it's Terry Wogan.>,
+{
+   if status earplugs is W (if wearing earplugs)
+   {
+      if describing
+      {
+         print <\Luckily you're wearing earplugs.>
+      }
+   }
+   else
+   {
+      print <
+Terry gets up and smiles at you, chuckling to himself in that Irish accent of 
+his. You stand transfixed in horror. He grabs you by the knee and takes you to 
+have your brain disolved in a torture of interruptions.>
+      print $8 key restart
+   }
+},{};
+
+      (*** RAPUNZELS FOREST ***)
+
+   f1,f1 f1 f2 f1,,     <>,{ if describing { print $10 } },{};
+   f2,f2 f1 f3 f1,,     <>,{ if describing { print $10 } },{};
+   f3,f1 f4 f2 f2,flask,<>,{ if describing { print $10 } },{};
+   f4,f3 f6 f3 f5,,     <>,{ if describing { print $10 } },{};
+   f5,f4 f7 f4 f2,,     <>,{ if describing { print $10 } },{};
+   f7,f5 f1 f8 f5,cube, <>,{ if describing { print $10 } },{};
+   f8,f4 f5 f9 f7,,     <>,{ if describing { print $10 } },{};
+
+   f6,f4 f3 f2 f1,door,<<
+You find youself (not a trivial task for a man of IQ=negligable) in a clearing 
+in the forest. In the centre of the clearing is a very tall tower. (Gene 
+Rodenberry makes exceedingly lofty towers.)>,{},
+{
+   if both typed open and either equal item 1=door or not item 1
+   {
+      print <<
+The door opens... to reveal a brick wall! However, on the wall is written:
+I'm afraid Rapunzel's rather tied up at the moment, but if you've got the guts 
+to leave a message after the tone, I'll turn you into a toad. This is a 
+recording. BEEEEEEEEEEEEP.>
+      loop
+   }
+   if both typed [rapunzel let down hair] and find rapunzel at limbo
+   {
+      print <<
+For a moment there is silence, then a long piece of rope comes down the side 
+of the tower, with a rabbit tied to the end.
+"Cooooeeeee!" comes a voice from above.
+You run over to the rope and start to climb, but after three metres of body-
+punishing climbing you cannot go on.>
+      if not find checkout at here/f { loop }
+      print <
+Embarasing you utterly, Checkout leaps over to the rope like Rudolf Nuraev and 
+begins to climb. One hundred and twenty three seconds later he comes down, 
+carrying a puzzled, semi-naked woman.
+He seems reluctant to put her down, but eventually her fingernails get through 
+to him.>
+      if find stock at here/f
+      {
+         print <
+She walks over to the obvious leader of the group, but Stock dutifully directs 
+her toward you.>
+      }
+print <
+"Thank god you came" she says "I've been in that tower for three centuries. I 
+bring you a great gift." With which, she gives you a sandwich.>
+      move sandwich from limbo to carry
+      move rapunzel from limbo to f
+      loop
+   }
+};
+
+   f9,- - - f1,rock,<<
+You are in a clearing in the blue forest.A small stream gurgles past your 
+feet, and then goes off to another part of the clearing and gurgles there 
+instead. In the centre of the clearing is a plastic rock, which has secret 
+doors in it. Secret doors so cleverly concealed that from 100ft away you 
+wouldn't be able to see the join.>,{},
+{
+   if both typed [open sesame] and not status rock is B
+   {
+      print <<
+Suddenly the doors open, and out come:
+1. Ali Baba and his Forty Thieves, hotly persued by...
+2. Some keystone cops, who themselves are being chased by...
+3. The four horsemen of the apocolypse, and even they are scared of...
+4. the huge mound of TRIBBLES!!!
+All an sundry disappear of into the woods, never to be seen again (you hope.) 
+You may now go down into the rock.>
+      make rock B
+      loop
+   }
+   if both status rock is B and both typed down and not typed put
+   {
+      print <<
+Your stomach is left behind as you plummet (like Monty Python's sheep) to 
+three miles deep in a hypervelocity lift.>
+      if find checkout at f
+      {
+         print <
+"Uuuuaaaarrrggghhhhh" remarks Checkout, thoughtfully.>
+      }
+      if find stock at f
+      {
+         print <\Stock's eyebrows are also left far behind.>
+      }
+      print $11 key
+      moveto f10 describe loop
+   }
+};
+
+   f10,- - - -,,<<
+You are in a sealed room, the walls lined with... LIGHTS! KNOBS! AND DIALS! 
+and they are all BEEPING! FLASHING! and WINKING! You almost snap under the 
+strain. Deep breathing... Calm down...>,
+{
+   if both not been here and describing
+   {
+      if find stock at f
+      {
+         print <
+Stock rushes around the room, logically trying to figure out how to disarm the 
+computer. This is very tedious and annoying of him.>
+      }
+      if find girl at f
+      {
+         print <
+As the computer optically senses the orion slave girl it lets loose a roar:
+"Gooooaaarrr!" it says, raising an appropriate appendage. "What a cracker" it 
+adds.>
+      }
+   }
+},{};
+
+      (*** KLINGOFF BASE ***)
+
+   b1,- b2 - -,xxxx,<<
+You are in a klingoff guardroom. A small door leads south into the well-light, 
+hygenic klingoff base. Above the door is a sign which reads:
+"Raise the alarm if you see Captain Berk going south">,
+{
+   if not been here
+   {
+      swap guard and xxxx  (make guard refer here)
+   }
+   if been b3
+   {
+      print $12 unmake costumes W   (lovesick klingoffs)
+   }
+},{};
+
+   (Special death location)
+
+   b2,- - - -,,<>,
+{
+   unmake costumes W (force death)
+},{};
+
+   b3,b1 - b4 -,,<<
+You are in a small building marked "Klingoff Inteligence." Here the greatest 
+brains of the Klingoff Empire come together to create and invent. The place is 
+deserted except for four suspiciously human figures. You are curious and go 
+over to listen...
+"...but of course you can use glue if you don't have double-sided sticky tape, 
+and get an adult to use the scissors. And here's one I made earlier..."
+An iron gate leads east to the rest of the base.>,
+{
+   if been here
+   {
+      print $12 unmake costumes W   (costumes are taken off)
+   }
+   else
+   {
+      print <\
+The audience consist of a lot of aolescent klingoffs, and, adolescents being 
+what they are they are instantly attracted by your revealing costumes. They 
+begin to advance on you.>
+   }
+},{};
+
+   b4,- - b8 b3,gate,<<
+You are in the klingoff market. Stall here sell begels, assorted rats, 
+licorice, scale maps of the MUF Exercise and other klingoff household items. 
+Unfortunately(?) they will not sell to slave girls. Inexplicably there is a 
+small pool of oil on the floor. To the south is a klingoff boozer. The heavy 
+door has "Insert membership token" written on it.>,
+{
+   if both been here and not status gate is B
+   {
+      print $12 unmake costumes W   (costumes are taken off)
+   }
+},{};
+
+   b5,b4 - - -,brandy plant,<<
+You are in the klingoff bar. All around klingoffs partake of the XXXX. Where 
+they get the XXXX from is a mystery however.>,{},{};
+
+   b6,- - b5 -,beer,<<
+You're in a secret little room. It's a bit of a dissapointment, interest-wise. 
+However the tedium appeals to you in a familiar way.>,{},{};
+
+   b8,- - - b4,,<<
+You are on a construction site in the base. Here they are putting up new 
+buildings and tunneling into the rock. Nearby is a plunger with some wire 
+leading off to some dynamite, some 100m distant.>,{},
+{
+   if typed [push plunger]
+   {
+      print <<
+In a huge explosion the new site collapses, almost taking you with it. 
+Fortunately you make it back to the market.>
+      if find clones at f
+      {
+         print <\"Now wasn't that totally pointless!" says Clones.>
+         if find checkout at f
+         {
+            print <\"Fun though!" says Checkout>
+         }
+      }
+      if find stock at f
+      {
+         print <
+"Fascinating." says Stock, his eyebrows doing a tango around his forehead.>
+      }
+      moveto b4
+      link east from b4 to -
+      loop
+   }
+};
+
+   carry,----,communicator,<>,{},{};
+   f,----,,<>,{},{};
+
+ENDPLACES
+
+START
+{
+   ink 0 blue
+   ink 1 brightwhite
+
+   print <<
+
+
+
+                        BARTREK: THE MOTION ADVENTURE
+
+Yes, you, Captain James X Berk of the M.U.F. Exercise must boldly go where no 
+man has gone before, and then come back because you realise why no man goes 
+there.
+
+The Exercise is powered by antimatter-beer fusion. Unfortunately, by means 
+unknown to you, the dreaded Klingoff empire has managed to steal all your 
+beer.
+
+Exercise is stranded, orbiting the  dreaded PLANET-YOU-SHOULDN'T-REALLY-LAND-
+ON.
+
+You must recover the beer supply and return to your home in time for tea.
+
+Good luck, and may the force be invested in your corn-flakes.
+
+                          Press any key to continue.>
+
+   key
+
+   picture <barscr.csc>
+
+   #3=2000     (Start conversations)
+   #4=1        (Klingoffs in bar)
+}
+
+BEFORE
+{
+   cr
+   if describing
+   {
+      print <\\Obvious exits:   +^H>
+      exits <^KN^H^J> <^JS^H^K> <^IE^H^H> <^HW> <> cr cr
+      if either count here or count f
+      {
+         print <\You can also make out:\>
+         list here list f cr
+      }
+   }
+
+   (Check costumes in klingoff base)
+
+   if both area B and not status costumes is W
+   {
+      print <
+Suddenly, armed klingoffs (klingovs, klingi?) with dobermans (dobermen?) 
+descend on you from all directions (directii? No, stop it!)
+"Ugbod toiledblog thatcher!" they swear, then they dissolve your brain with 
+the ancient words of power:
+"This is your life.">
+      print $8 key restart
+   }
+
+   (Rude word curse disperser detector!!!! Gosh!)
+   if both equal #1=1 and greater random 100 than 85
+   {
+      print <An onion falls on your head\>
+      #1=0
+   }
+   if both equal #1=2 and greater random 100 than 95
+   {
+      print <Your head falls off>
+      if find clones at here/f
+      {
+         print <\"Look, his head's fallen off" remarks Clones...>
+      }
+      print $8 key restart
+   }
+
+   (CONVERSATIONS)
+   if both greater random 100 than 90 and not greater #3 than 2006
+   {
+      if both find clones at here/f and
+         both find stock at here/f and
+              find checkout at here/f
+      {
+         cr print $#3 cr
+         #3=add #3+1
+      }
+   }
+
+   print <^P^X*^X >
+}
+
+
+AFTER
+{
+   if both at d5 and equal item 1=wogan
+   {
+      print <Pardon?> done
+   }
+
+   if typed quit
+   {
+      print <Are you sure you want to quit? (Y/N)>
+      if yesno
+      {
+         print <\Do you want another go? (Y/N)>
+         if yesno { restart }
+         quit
+      }
+      done
+   }
+
+   if typed [wear/put on/insert earplugs]
+   {
+      if not find item 1 at carry
+      {
+         print $3 done
+      }
+      if not status item 1 is A
+      {
+         print <You try in vain.>
+         if find clones at here/f
+         {
+            print $5
+         }
+         done
+      }
+      make item 1 W
+      if equal item 1=costumes
+      {
+         print <You feel a right wally!> done
+      }
+      if equal item 1=earplugs
+      {
+         print <<
+You have a bit of trouble, but by hammering your head against a convienient 
+stone you find you only need one.> done
+      }
+      print $1
+      done
+   }
+
+   if typed [take off]
+   {
+      if find item 1 at carry
+      {
+         if status item 1 is W
+         {
+            unmake item 1 W print $1 done
+         }
+      }
+      print <You aren't wearing any> done
+   }
+
+   if typed [take/pick up]
+   {
+      if find item 1 at carry
+      {
+         print <You've already got that.> done
+      }
+      if find item 1 at f
+      {
+         print <They are already trundling around with you.> done
+      }
+      if not find item 1 at here
+      {
+         print $2 done
+      }
+      if status item 1 is I
+      {
+         print <You can't take that.> done
+      }
+      if status item 1 is P
+      {
+         move item 1 from here to f
+      }
+      else
+      {
+         if both equal count carry = 2 and
+            not either equal item 1=handbag or find handbag at carry
+         {
+            print <Your muscular body can carry no more.> done
+         }
+         move item 1 from here to carry
+      }
+      print $1 done
+   }
+
+   if typed [drop/put down]
+   {
+      if not item 1 { print $3 done }
+      if status item 1 is P
+      {
+         if not find item 1 at f
+         {
+            print <They weren't with you anyway, ner.> done
+         }
+         move item 1 from f to here
+         print $1 done
+      }
+      if not find item 1 at carry
+      {
+         print $3 done
+      }
+      if equal item 1=communicator
+      {
+         print <<
+The communicator is attatched to a piece of string which goes up your sleave, 
+and down the other, so you don't lose it.> done
+      }
+      move item 1 from carry to here
+      unmake item 1 W      (remove item of clothing)
+      if equal item 1=handbag
+      {
+         while greater count carry than 2
+         {
+            unmake firstat carry W  (remove item of clothing)
+            move firstat carry from carry to here
+         }
+      }
+      print $1 done
+   }
+
+   if typed inventory
+   {
+      if count carry
+      {
+         print <You are straining to carry:\>
+         list carry done
+      }
+      print <You are not carrying a solitary sausage.> done
+   }
+
+   if typed [examine/look at]
+   {
+      if not find item 1 at here/carry/f
+      {
+         print <There's no more detail on that here.> done
+      }
+      examine item 1
+      done
+   }
+
+   if typed look { describe done }
+
+   if typed save
+   {
+      print <Enter name for file:> save done
+   }
+   if typed load
+   {
+      print <Enter name of file:> load describe done
+   }
+
+   if typed hello
+   {
+      if not find item 1 at here/f/carry
+      {
+         print $2 done
+      }
+      if not status item 1 is P
+      {
+         print <On the whole you get no response>
+         if find clones at here/f
+         {
+            print $5
+         }
+         done
+      }
+      print $add 1000+attrib item 1
+      done
+   }
+
+   if typed give
+   {
+      sort 2
+      if not item 1
+      {
+         print $6 done
+      }
+      if not find item 1 at here/carry/f
+      {
+         print $2 done
+      }
+      if not find item 2 at carry
+      {
+         print $3 done
+      }
+      if not status item 1 is P
+      {
+         print $7
+         if find clones at here/f
+         {
+            print $5
+         }
+         done
+      }
+      if both at s6 and both equal item 1=grotty and equal item 2=crystals
+      {
+         print <<
+"Aye Cap'n" says Grotty "tha's wa we need." So saying, he takes the crystals 
+and puts them into the transporter. "The' we are, me beauty" he says.>
+         unmake transporter B
+         move crystals from carry to limbo
+         done
+      }
+      if both at b1 and both equal item 1=guard and equal item 2=cube
+      {
+         print <<
+The guard eagerly grabs the cube, crying "Cubeewubee" in delight. He starts to 
+fiddle with the monotonal sections, trying to get the correct pattern. Soon 
+his mind is putty.>
+         attrib guard = add attrib guard+1
+         make guard B
+         move cube from carry to limbo
+         link south from b1 to b3
+         done
+      }
+      print <You get it handed straight back> done
+   }
+
+   if typed shoot
+   {
+      if not find item 1 at carry
+      {
+         print $3 print < and your fingers aren't loaded.> done
+      }
+      if equal item 1=bicorder
+      {
+         if find slime at here
+         {
+            print <<
+The fungus shrivels up under the blast of the 50 mega-hurt beam emitted 
+accidentaly by the bicorder. Suddenly, a huge mass of purring furry creatures 
+roll in through the door. Eating the rest of the fungus, they sweep over you 
+and eat the bicorder!>
+            if find stock at here/f
+            {
+               print <
+"Fascinating" says Stock, arching his eyebrow beyond the extent of his 
+forehead.>
+            }
+            if find clones at here/f
+            {
+               print <
+"Oh no, tribbles" says Clones in disgust "and they've eaten my lovely 
+bicorder!">
+            }
+            if find checkout at here/f
+            {
+               print <
+"Werrent they Cute, Kyptyn" says Checkout.>
+            }
+            move fungus from here to limbo
+            move bicorder from carry to limbo
+            link south from d4 to f1
+            done
+         }
+         print <<
+The bicorder emits some pathetic bleeps and then falls silent.> done
+      }
+      if not equal item 1=fazer
+      {
+         print $7 print < (well, did you really expect...?)>
+         done
+      }
+      if status fazer is B
+      {
+         print $7
+         if find stock at here/f
+         {
+            print <
+"An ionic space storm seems to be interfereing with your fazer, Captain" says 
+Stock.>
+         }
+         if find clones at here/f
+         {
+            print <
+"Darned machines" says Clones "give me a hypo any day.">
+         }
+         if find checkout at here/f
+         {
+            print <
+"Kyptyn" remarks Checkout "the bytteries are flit">
+         }
+         done
+      }
+      print <<
+You pull the trigger, narrowly miss your own foot, and blow a huge hole in the 
+ground.>
+      if find clones at here/f
+      {
+         print <
+"Jim!" says Clones in disgust "have a thought for all those poor microbes down 
+there!">
+      }
+      if at b5
+      {
+         print <
+The effect of this astonishing marksman ship is to clear the bar within 20 
+minutes.>
+         #4=0 done
+      }
+      done
+   }
+
+   (Rude word detector!!! Golly!!)
+   if typed thatcher
+   {
+      if #1
+      {
+         print <<
+An octopus appears, and says: "Dear enemy I curse you for all eternity, and 
+hope your head falls off at an inconvienient moment." He disappears in a puff 
+of crab-breath.>
+         #1=2 done
+      }
+      print <<
+A sperm whale appears, and says: "Dear enemy I curse you for all eternity, and 
+hope an onion falls on your head." With which, he disappears in a beach-
+buggy.>
+      #1=1 done
+   }
+
+   if typed [kill/strangle]
+   {
+      print <<
+There is no violence in this game. However there is a lot of cacking, 
+strangling etc.> done
+   }
+
+   if typed beam
+   {
+      if find stock at here/f
+      {
+         print <Stock smiles radiantly.\>
+      }
+      if not find communticator at carry
+      {
+         print <You don't have a communicator> loop
+      }
+      if not find grotty at s6
+      {
+         print <Grotty's not there to work the darn thing!> loop
+      }
+      if status transporter is B
+      {
+         print $9 print <
+His voice sounds strange coming from your cheese grater> done
+      }
+      print $4
+      print $11 key
+      moveto s6 describe loop
+   }
+
+   if typed [insert/plug/put in]
+   {
+      if both equal item 1=sandwich and both at b4 and find sandwich at carry
+      {
+         print <The sandwich slides in with a squelch, and the door opens.>
+         link south from b4 to b5
+         move sandwich from carry to limbo
+         done
+      }
+      sort 2
+      if not item 1
+      {
+         print $6 done
+      }
+      if not both find item 1 at carry and find item 2 at carry
+      {
+         print $3 done
+      }
+      if both equal item 1=fazer and equal item 2=battery
+      {
+         print <<
+After a ten hour struggle the battery clicks safely into place.>
+         move battery from carry to limbo
+         unmake fazer B
+         done
+      }
+      print $7 done
+   }
+
+   if typed dance
+   {
+      if not item 1
+      {
+         print <You dance for a bit, and feel a bit of a prat.> done
+      }
+      if not find item 1 at here/f/carry
+      {
+         print $2 done
+      }
+      if not status item 1 is P
+      {
+         print $7
+         if find clones at here/f
+         {
+            print $5
+         }
+         done
+      }
+      if not equal item 1=slave
+      {
+         print <The reply is loud and clear: "NO!"> done
+      }
+      print <<
+The beautiful orion slave girl begins to dance... Several CENSORED things 
+happen, after which you collapse in happy exhaustion.>
+      if find stock at here/f
+      {
+         print <\"Fascinating" says Stock, eyebrows leaping into orbit.>
+      }
+      if find clones at here/f
+      {
+         print <
+"Jim! I thought I told you that you weren't up to IT yet. You still havn't 
+recovered from the LAST time" says Clones, getting annoyed.>
+      }
+      if find checkout at here/f
+      {
+         print <
+"Kyptyn" wails Checkout "I tort we werr going steady!">
+      }
+      if not at f10 { done }
+      print <
+The computer starts to shake and roar, it's lights flash brightly, and it 
+becomes monumentally frustrated since it is bolted to the floor. Finally it 
+explodes in frustration, taking the floor with it.
+Once again you are plummetted down to earth. This time one of your kidneys is 
+left behind.>
+      (Move everything down)
+      while count f10
+      {
+         move firstat f10 from f10 to b1
+      }
+      moveto b1
+      describe
+
+      if find rapunzel at here/f
+      {
+         print <
+Luckily you land on something soft, but Rapunzel pushes you off.>
+         print $11 key done
+      }
+      else
+      {
+         print <
+You smash into the floor with a rather nasty splatt sound...>
+         print $8 key restart
+      }
+   }
+
+   if typed fill
+   {
+      #0=item 1
+      if not #0 { #0=flask }
+      if not find item 1 at carry
+      {
+         print $3 done
+      }
+      if not equal item 1=flask
+      {
+         print <You try without success.> done
+      }
+      if at f9
+      {
+         unmake flask FO
+         make flask FT
+         print $1 done
+      }
+      if at b4
+      {
+         unmake flask FT
+         make flask FO
+         print $1 done
+      }
+      print <I don't think there's anything worth filling it with here.>
+      done
+   }
+
+   if typed oil
+   {
+      if not both find flask at carry and
+         both status flask is F and status flask is O
+      {
+         print <You don't have a suitable lubricant.>
+         if both find clones at here/f and find stock at here/f
+         {
+            print <\"No, Stock" says Clones "earwax will NOT do.">
+         }
+         done
+      }
+      if not find item 1 at here/carry/f
+      {
+         print $2 done
+      }
+      unmake flask FO
+      if equal item 1=plant
+      {
+         print <<
+The plant shrivels up under the sticky substance, revealing a secret door!>
+         link west from b5 to b6
+         if #4    (klingoffs still around?)
+         {
+            print <
+The klingoffs get suspicious and rip off all your clothes.>
+            unmake costumes W
+         }
+         make plant O
+         done
+      }
+      make item 1 O
+      print $1 done
+   }
+
+   if typed water
+   {
+      if not both find flask at carry and
+         both status flask is F and status flask is T
+      {
+         print <You don't have any of the wet stuff.> done
+      }
+      if not find item 1 at here/carry/f
+      {
+         print $2 done
+      }
+      unmake flask FT
+      if equal item 1=gate
+      {
+         print <The gate gets very rusty and jams up.>
+         make gate B
+         link west from b4 to -
+         done
+      }
+      make item 1 T
+      print $1 done
+   }
+
+   if typed qsave { quicksave print $1 done }
+   if typed oops  { quickload describe done }
+
+   if typed drink
+   {
+      if not find item 1 at carry
+      {
+         print $3 done
+      }
+      print $1 print < (burp!)>
+      move item 1 from carry to limbo
+      if equal item 1=brandy
+      {
+         print <\"WOW!" you gasp.>
+         if find grotty at s6
+         {
+            print <
+Just then you hear the crackle of cornflakes, but you are mistaken. It's a 
+transporter beam! Grotty appears out of thin air.
+"Wi' been trying to locate you, Cap'n," he says, "but we dinna have Stock's 
+logical brain. If you'd a told us we'd have taken it out before ye left. So we 
+homed in on yur brain waves, Cap'n. It were a long job, but we dinnit." He 
+spots the remains of the Gromulan Brandy and says: "So, thas the secret is it. 
+Heerrs a cheese grater for you, now I must be getting back." With that, Grotty 
+gives you a communicator and dissapears in a puff of glitter.>
+            move communicator from limbo to carry
+         }
+      }
+      done
+   }
+
+   if typed solve
+   {
+      if not find item 1 at carry
+      {
+         print $3 done
+      }
+
+      if not equal item 1=cube
+      {
+         print $7 done
+      }
+
+      print <Ok.>
+
+      while 1
+      {
+         print <.>
+         #5=random 400
+         while #5
+         {
+            #5=sub #5-1
+         }
+         if greater random 100 than 97
+         {
+            format
+            print $add random 5+3000
+            format not
+         }
+      }
+   }
+
+   (*** NEW VERBS IN HERE ***)
+
+   if typed pour
+   {
+      print <Pour what?> done
+   }
+
+   if typed up
+   {
+      print <You are unable to go up.> done
+   }
+
+   if typed down
+   {
+      print <You are unable to go down.> done
+   }
+
+   if typed use
+   {
+      print <You must be more specific than USE.> done
+   }
+
+   print <I didn't understand a word.>
+}
