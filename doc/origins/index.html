@@ -8,8 +8,6 @@
 
 <title>Adlan</title>
 
-<link rel="stylesheet" href="/default.css" type="text/css" />
-
 </head>
 
 <body>
@@ -28,29 +26,29 @@
 
 <dl>
 
-<dt><a href="adlan.max">adlan.max</a></dt>
+<dt><a href="../../src/adlan.max">adlan.max</a></dt>
 
 <dd>The master file.  This was kept small so the program could be assembled into RAM for debugging.</dd>
 
-<dt><a href="adlan1.sub">adlan1.sub</a></dt>
+<dt><a href="../../src/adlan1.sub">adlan1.sub</a></dt>
 
 <dd>Most of the compiler is here, starting right at the beginning of the file.  Each main section of the source code is processed in turn.  Subroutines for compiling things like strings (<code>comp_str</code>), word lists (<code>comp_words</code>), code statements (<code>comp_code</code>), and expressions <code>comp_exp</code>) follows.</dd>
 
-<dt><a href="adlan2.sub">adlan2.sub</a></dt>
+<dt><a href="../../src/adlan2.sub">adlan2.sub</a></dt>
 
 <dd>This short file contains a few more subroutines for compiling things like colour names (<code>comp_colour</code>) and then has tables of all the compiler error messages and keywords.</dd>
 
-<dt><a href="adlan3.sub">adlan3.sub</a></dt>
+<dt><a href="../../src/adlan3.sub">adlan3.sub</a></dt>
 
 <dd>This is the run-time code for the adventure.  It has the run-time implementations of things like the parser, formatted text output, the various language commands, loading and saving games, and so on.</dd>
 
-<dt><a href="adlan4.sub">adlan4.sub</a></dt>
+<dt><a href="../../src/adlan4.sub">adlan4.sub</a></dt>
 
 <dd>This contains a the utility commands that came on the ROM: <code>COMPRESS</code>, <code>ROMOFF</code>, etc.  It has the picture compression routine used to create the ".csc" files, which works by storing the differences between lines on the screen.  It also contains the help text, and the fonts.  The fonts were created using another program I wrote called "Charon".</dd>
 
-<dt><a href="adlan.rom">adlan.rom</a></dt>
+<dt><a href="../../bin/adlan.rom">adlan.rom</a></dt>
 
-<dd>Finally, here's the ROM image, suitable for use in emulators, or for blowing on to an EPROM.  I rebuilt this recently using an emulator so that I could add copyright messages allowing distribution of the ROM.  You can read the messages in the <code>copying</code> routine in the <a href="adlan4.sub">adlan4.sub</a> file.</dd>
+<dd>Finally, here's the ROM image, suitable for use in emulators, or for blowing on to an EPROM.  I rebuilt this recently using an emulator so that I could add copyright messages allowing distribution of the ROM.  You can read the messages in the <code>copying</code> routine in the <a href="../../src/adlan4.sub">adlan4.sub</a> file.</dd>
 
 </dl>
 
@@ -58,27 +56,27 @@
 
 <dl>
 
-<dt><a href="manual.html">User Manual</a></dt>
+<dt><a href="../../manual/manual.html">User Manual</a></dt>
 
 <dd>The user's manual, converted to HTML.</dd>
 
-<dt><a href="frame.adl">frame.adl</a></dt>
+<dt><a href="../../src/frame.adl">frame.adl</a></dt>
 
 <dd>ASCII file containing framework</dd>
 
-<dt><a href="frame.bdl">frame.bdl</a></dt>
+<dt><a href="../../src/frame.bdl">frame.bdl</a></dt>
 
 <dd>BASIC quoted file containing framework</dd>
 
-<dt><a href="wframe.adl">wframe.adl</a></dt>
+<dt><a href="../../src/wframe.adl">wframe.adl</a></dt>
 
 <dd>ASCII framework using windows and colours in mode 1</dd>
 
-<dt><a href="wframe.bdl">wframe.bdl</a></dt>
+<dt><a href="../../src/wframe.bdl">wframe.bdl</a></dt>
 
 <dd>BASIC quoted framework using windows and colours in mode 1</dd>
 
-<dt><a href="example.adl">example.adl</a></dt>
+<dt><a href="../../src/example.adl">example.adl</a></dt>
 
 <dd>ASCII file containing the example adventure used in the User Manual</dd>
 
@@ -94,7 +92,7 @@
 
 <dl>
 
-<dt><a href="supplied.dsk">supplied.dsk</a></dt>
+<dt><a href="../../bin/supplied.dsk">supplied.dsk</a></dt>
 
 <dd>The disk that was supplied with the Adlan ROM.  It contains the runnable Bar Trek adventure, plus all the framework files above and some programs to help with compressing screens.  It's in the EDSK format used by most of the Amstrad CPC emulators.  (I'm using <a href="http://bricerive.free.fr/cpc">CPC++</a>.)  You might need to right-click or click-and-hold on this and use "Save" or "Download" to make your browser do the right thing.</dd>
 
