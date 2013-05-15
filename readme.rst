@@ -1,5 +1,7 @@
 Adlan
 =====
+:author: Richard Brooksby
+:date: 2013-05-04
 
 Adlan is an `adventure game
 <http://en.wikipedia.org/wiki/Adventure_game>`_ language and compiler
